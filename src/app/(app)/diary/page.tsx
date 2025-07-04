@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { format, addDays } from 'date-fns';
 
 type Snapshot = {
   id: number;
@@ -28,14 +29,18 @@ type Snapshot = {
   notes: string;
 };
 
-const initialImages: Snapshot[] = Array.from({ length: 21 }, (_, i) => ({
-  id: i + 1,
-  src: `https://placehold.co/600x400.png?text=Day+${i + 1}`,
-  alt: `Snapshot for day ${i + 1}`,
-  date: `July ${i + 1}, 2025`,
-  hint: `day ${i+1}`,
-  notes: ""
-}));
+const startDate = new Date('2025-06-29T00:00:00');
+const initialImages: Snapshot[] = Array.from({ length: 21 }, (_, i) => {
+  const currentDate = addDays(startDate, i);
+  return {
+    id: i + 1,
+    src: `https://placehold.co/600x400.png`,
+    alt: `Snapshot for ${format(currentDate, 'PPP')}`,
+    date: format(currentDate, 'MMMM d, yyyy'),
+    hint: `day ${i + 1}`,
+    notes: "",
+  };
+});
 
 function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect: (image: Snapshot) => void }) {
   return (
@@ -103,16 +108,12 @@ export default function DiaryPage() {
           </AlertDescription>
         </Alert>
         <Tabs defaultValue="month" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-grid md:grid-cols-3 mb-4">
-            <TabsTrigger value="year">Year</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid md:grid-cols-2 mb-4">
             <TabsTrigger value="month">Month</TabsTrigger>
             <TabsTrigger value="week">Week</TabsTrigger>
           </TabsList>
-          <TabsContent value="year">
-            <PhotoGrid items={images} onImageSelect={handleImageSelect} />
-          </TabsContent>
           <TabsContent value="month">
-            <PhotoGrid items={images.slice(0, 14)} onImageSelect={handleImageSelect} />
+            <PhotoGrid items={images} onImageSelect={handleImageSelect} />
           </TabsContent>
           <TabsContent value="week">
             <PhotoGrid items={images.slice(0, 7)} onImageSelect={handleImageSelect} />
