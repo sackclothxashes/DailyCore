@@ -39,6 +39,9 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
   const [editedTitle, setEditedTitle] = useState(goal.title);
   const [editedStartDate, setEditedStartDate] = useState<Date | undefined>(goal.startDate);
   const [editedEndDate, setEditedEndDate] = useState<Date | undefined>(goal.endDate);
+  const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
+  const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
+
 
   useEffect(() => {
     const start = goal.startDate;
@@ -125,7 +128,7 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover>
+              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -142,7 +145,10 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
                   <Calendar
                     mode="single"
                     selected={editedStartDate}
-                    onSelect={setEditedStartDate}
+                    onSelect={(date) => {
+                      setEditedStartDate(date);
+                      setIsStartDatePopoverOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -150,7 +156,7 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-               <Popover>
+               <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -167,7 +173,10 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
                   <Calendar
                     mode="single"
                     selected={editedEndDate}
-                    onSelect={setEditedEndDate}
+                    onSelect={(date) => {
+                      setEditedEndDate(date);
+                      setIsEndDatePopoverOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
