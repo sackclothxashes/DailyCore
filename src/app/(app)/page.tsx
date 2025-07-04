@@ -26,7 +26,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +84,8 @@ export default function DashboardPage() {
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalStartDate, setNewGoalStartDate] = useState<Date | undefined>();
   const [newGoalEndDate, setNewGoalEndDate] = useState<Date | undefined>();
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   const handleAddGoal = () => {
     if (newGoalTitle && newGoalStartDate && newGoalEndDate) {
@@ -158,53 +159,53 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !newGoalStartDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newGoalStartDate ? format(newGoalStartDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={newGoalStartDate}
-                    onSelect={setNewGoalStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !newGoalStartDate && "text-muted-foreground"
+                )}
+                onClick={() => setShowStartDatePicker(!showStartDatePicker)}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {newGoalStartDate ? format(newGoalStartDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showStartDatePicker && (
+                <Calendar
+                  mode="single"
+                  selected={newGoalStartDate}
+                  onSelect={(date) => {
+                    setNewGoalStartDate(date);
+                    setShowStartDatePicker(false);
+                  }}
+                  initialFocus
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-               <Popover modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !newGoalEndDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newGoalEndDate ? format(newGoalEndDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={newGoalEndDate}
-                    onSelect={setNewGoalEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !newGoalEndDate && "text-muted-foreground"
+                )}
+                onClick={() => setShowEndDatePicker(!showEndDatePicker)}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {newGoalEndDate ? format(newGoalEndDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showEndDatePicker && (
+                <Calendar
+                  mode="single"
+                  selected={newGoalEndDate}
+                  onSelect={(date) => {
+                    setNewGoalEndDate(date);
+                    setShowEndDatePicker(false);
+                  }}
+                  initialFocus
+                />
+              )}
             </div>
           </div>
           <DialogFooter>

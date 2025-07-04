@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { differenceInDays, format } from "date-fns";
 import { Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +38,8 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
   const [editedTitle, setEditedTitle] = useState(goal.title);
   const [editedStartDate, setEditedStartDate] = useState<Date | undefined>(goal.startDate);
   const [editedEndDate, setEditedEndDate] = useState<Date | undefined>(goal.endDate);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   useEffect(() => {
     const start = goal.startDate;
@@ -125,53 +126,53 @@ export function ProgressCard({ goal, onUpdate, onDelete, className }: ProgressCa
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !editedStartDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {editedStartDate ? format(editedStartDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={editedStartDate}
-                    onSelect={setEditedStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !editedStartDate && "text-muted-foreground"
+                )}
+                onClick={() => setShowStartDatePicker(!showStartDatePicker)}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {editedStartDate ? format(editedStartDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showStartDatePicker && (
+                <Calendar
+                  mode="single"
+                  selected={editedStartDate}
+                  onSelect={(date) => {
+                    setEditedStartDate(date);
+                    setShowStartDatePicker(false);
+                  }}
+                  initialFocus
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-               <Popover modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !editedEndDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {editedEndDate ? format(editedEndDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={editedEndDate}
-                    onSelect={setEditedEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !editedEndDate && "text-muted-foreground"
+                )}
+                onClick={() => setShowEndDatePicker(!showEndDatePicker)}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {editedEndDate ? format(editedEndDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showEndDatePicker && (
+                <Calendar
+                  mode="single"
+                  selected={editedEndDate}
+                  onSelect={(date) => {
+                    setEditedEndDate(date);
+                    setShowEndDatePicker(false);
+                  }}
+                  initialFocus
+                />
+              )}
             </div>
           </div>
           <DialogFooter className="sm:justify-between">
