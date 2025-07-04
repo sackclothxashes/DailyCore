@@ -160,7 +160,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
+              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -188,7 +188,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-               <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
+               <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
