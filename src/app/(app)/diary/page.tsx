@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Image as ImageIcon } from "lucide-react";
@@ -5,20 +8,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
-const images = Array.from({ length: 21 }, (_, i) => ({
+type Snapshot = {
+  id: number;
+  src: string;
+  alt: string;
+  date: string;
+  hint: string;
+  notes: string;
+};
+
+const initialImages: Snapshot[] = Array.from({ length: 21 }, (_, i) => ({
   id: i + 1,
   src: `https://placehold.co/600x400.png?text=Day+${i + 1}`,
   alt: `Snapshot for day ${i + 1}`,
   date: `July ${i + 1}, 2024`,
-  hint: `day ${i+1}`
+  hint: `day ${i+1}`,
+  notes: ""
 }));
 
-function PhotoGrid({ items }: { items: typeof images }) {
+function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect: (image: Snapshot) => void }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {items.map((image) => (
-        <Card key={image.id} className="overflow-hidden group">
+        <Card key={image.id} className="overflow-hidden group cursor-pointer" onClick={() => onImageSelect(image)}>
           <CardContent className="p-0">
             <div className="aspect-w-16 aspect-h-9 relative">
               <Image
@@ -41,40 +64,97 @@ function PhotoGrid({ items }: { items: typeof images }) {
 }
 
 export default function DiaryPage() {
+  const [images, setImages] = useState<Snapshot[]>(initialImages);
+  const [selectedImage, setSelectedImage] = useState<Snapshot | null>(null);
+  const [currentNotes, setCurrentNotes] = useState("");
+
+  const handleImageSelect = (image: Snapshot) => {
+    setSelectedImage(image);
+    setCurrentNotes(image.notes);
+  };
+
+  const handleSaveNotes = () => {
+    if (!selectedImage) return;
+    setImages(images.map(img => img.id === selectedImage.id ? { ...img, notes: currentNotes } : img));
+    setSelectedImage(null);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedImage(null);
+  }
+
   return (
-    <div>
-      <PageHeader
-        title="Daily Snapshots"
-        description="A picture a day. Create a visual journey of your life."
-      >
-        <Button>
-          <PlusCircle className="mr-2" />
-          Add Snapshot
-        </Button>
-      </PageHeader>
-      <Alert className="mb-8 bg-primary/20 border-primary/40">
-        <ImageIcon className="h-4 w-4" />
-        <AlertTitle className="font-headline">Daily Reminder</AlertTitle>
-        <AlertDescription>
-          Don't forget to capture today's moment! A small snapshot can hold a big memory.
-        </AlertDescription>
-      </Alert>
-      <Tabs defaultValue="month" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-grid md:grid-cols-3 mb-4">
-          <TabsTrigger value="year">Year</TabsTrigger>
-          <TabsTrigger value="month">Month</TabsTrigger>
-          <TabsTrigger value="week">Week</TabsTrigger>
-        </TabsList>
-        <TabsContent value="year">
-          <PhotoGrid items={images} />
-        </TabsContent>
-        <TabsContent value="month">
-          <PhotoGrid items={images.slice(0, 14)} />
-        </TabsContent>
-        <TabsContent value="week">
-          <PhotoGrid items={images.slice(0, 7)} />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <>
+      <div>
+        <PageHeader
+          title="Daily Snapshots"
+          description="A picture a day. Create a visual journey of your life."
+        >
+          <Button>
+            <PlusCircle className="mr-2" />
+            Add Snapshot
+          </Button>
+        </PageHeader>
+        <Alert className="mb-8 bg-primary/20 border-primary/40">
+          <ImageIcon className="h-4 w-4" />
+          <AlertTitle className="font-headline">Daily Reminder</AlertTitle>
+          <AlertDescription>
+            Don't forget to capture today's moment! A small snapshot can hold a big memory.
+          </AlertDescription>
+        </Alert>
+        <Tabs defaultValue="month" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-grid md:grid-cols-3 mb-4">
+            <TabsTrigger value="year">Year</TabsTrigger>
+            <TabsTrigger value="month">Month</TabsTrigger>
+            <TabsTrigger value="week">Week</TabsTrigger>
+          </TabsList>
+          <TabsContent value="year">
+            <PhotoGrid items={images} onImageSelect={handleImageSelect} />
+          </TabsContent>
+          <TabsContent value="month">
+            <PhotoGrid items={images.slice(0, 14)} onImageSelect={handleImageSelect} />
+          </TabsContent>
+          <TabsContent value="week">
+            <PhotoGrid items={images.slice(0, 7)} onImageSelect={handleImageSelect} />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && handleCloseDialog()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{selectedImage?.date}</DialogTitle>
+            <DialogDescription>Add your thoughts and reflections for this day.</DialogDescription>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="space-y-4 py-4">
+              <div className="rounded-md overflow-hidden">
+                <Image
+                  src={selectedImage.src}
+                  alt={selectedImage.alt}
+                  width={600}
+                  height={400}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="notes">Today's Thoughts</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="What's on your mind today?"
+                  value={currentNotes}
+                  onChange={(e) => setCurrentNotes(e.target.value)}
+                  rows={5}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={handleSaveNotes}>Save Note</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

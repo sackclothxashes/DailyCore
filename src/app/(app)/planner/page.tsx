@@ -1,9 +1,13 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Flame, Dumbbell, BookOpen, Droplets } from "lucide-react";
+import { Flame, Dumbbell, BookOpen, Droplets, PlusCircle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { Button } from '@/components/ui/button';
 
 const dailyTasks = [
   { id: 'task-1', title: 'Morning Exercise', icon: Dumbbell, streak: 12 },
@@ -12,6 +16,16 @@ const dailyTasks = [
 ];
 
 export default function PlannerPage() {
+  const [currentDateString, setCurrentDateString] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+
+  useEffect(() => {
+    const today = new Date();
+    setSelectedDate(today);
+    setCurrentDateString(today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+  }, []);
+
+
   return (
     <div>
       <PageHeader
@@ -22,8 +36,16 @@ export default function PlannerPage() {
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Today's Plan</CardTitle>
-              <CardDescription>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Today's Plan</CardTitle>
+                  <CardDescription>{currentDateString || 'Loading...'}</CardDescription>
+                </div>
+                <Button variant="outline" size="sm">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Task
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-4">
@@ -55,10 +77,11 @@ export default function PlannerPage() {
               <CardTitle>Completion History</CardTitle>
               <CardDescription>View your progress over the month.</CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center">
+            <CardContent>
                <Calendar
                 mode="single"
-                selected={new Date()}
+                selected={selectedDate}
+                onSelect={setSelectedDate}
                 className="rounded-md"
                 modifiers={{
                   completed: [new Date(2024, 6, 20), new Date(2024, 6, 21), new Date(2024, 6, 22), new Date(2024, 6, 24)],
