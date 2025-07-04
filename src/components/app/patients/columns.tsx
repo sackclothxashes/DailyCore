@@ -22,21 +22,25 @@ export type Patient = {
   sex: "Male" | "Female" | "Other"
   diagnosis: string
   treatment: string
-  status: "Active" | "Recovered" | "Deceased"
+  status: "Active" | "Discharged" | "Deceased"
+  presentingComplaints: string
+  comorbidities: string
+  adviceOnDischarge?: string
 }
 
 const statusVariantMap: { [key in Patient["status"]]: "default" | "secondary" | "destructive" } = {
     Active: "default",
-    Recovered: "secondary",
+    Discharged: "secondary",
     Deceased: "destructive",
 };
 
 type GetColumnsProps = {
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
+  onDischarge: (patient: Patient) => void;
 }
 
-export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Patient>[] => [
+export const getColumns = ({ onEdit, onDelete, onDischarge }: GetColumnsProps): ColumnDef<Patient>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -110,6 +114,8 @@ export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Pat
     id: "actions",
     cell: ({ row }) => {
       const patient = row.original
+      const isDischarged = patient.status === 'Discharged';
+
       return (
         <div className="text-right">
           <DropdownMenu>
@@ -129,6 +135,12 @@ export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Pat
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onEdit(patient)}>
                 Edit record
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDischarge(patient)}
+                disabled={isDischarged}
+              >
+                Discharge Patient
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className="text-destructive"

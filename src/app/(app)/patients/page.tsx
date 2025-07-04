@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { Patient, getColumns } from '@/components/app/patients/columns';
 import { DataTable } from '@/components/app/patients/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const initialPatients: Patient[] = [
   {
@@ -45,6 +47,8 @@ const initialPatients: Patient[] = [
     diagnosis: 'Hypertension',
     treatment: 'Lisinopril',
     status: 'Active',
+    presentingComplaints: 'Headaches, dizziness',
+    comorbidities: 'None',
   },
   {
     id: 'PAT-002',
@@ -54,6 +58,8 @@ const initialPatients: Patient[] = [
     diagnosis: 'Type 2 Diabetes',
     treatment: 'Metformin',
     status: 'Active',
+    presentingComplaints: 'Fatigue, frequent urination',
+    comorbidities: 'Obesity',
   },
   {
     id: 'PAT-003',
@@ -62,7 +68,10 @@ const initialPatients: Patient[] = [
     sex: 'Male',
     diagnosis: 'Pneumonia',
     treatment: 'Amoxicillin',
-    status: 'Recovered',
+    status: 'Discharged',
+    presentingComplaints: 'Cough, fever, shortness of breath',
+    comorbidities: 'COPD',
+    adviceOnDischarge: 'Continue full course of antibiotics. Follow up in 1 week.',
   },
   {
     id: 'PAT-004',
@@ -72,6 +81,8 @@ const initialPatients: Patient[] = [
     diagnosis: 'Heart Failure',
     treatment: 'Furosemide',
     status: 'Deceased',
+    presentingComplaints: 'Shortness of breath, swelling in legs',
+    comorbidities: 'Kidney disease',
   },
   {
     id: 'PAT-005',
@@ -81,6 +92,8 @@ const initialPatients: Patient[] = [
     diagnosis: 'Asthma',
     treatment: 'Albuterol Inhaler',
     status: 'Active',
+    presentingComplaints: 'Wheezing, chest tightness',
+    comorbidities: 'Allergic rhinitis',
   },
 ];
 
@@ -90,6 +103,9 @@ const emptyPatient: Omit<Patient, 'id' | 'status'> = {
   sex: 'Other',
   diagnosis: '',
   treatment: '',
+  presentingComplaints: '',
+  comorbidities: '',
+  adviceOnDischarge: '',
 };
 
 export default function PatientsPage() {
@@ -97,10 +113,11 @@ export default function PatientsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(
-    null
-  );
-  const [patientFormData, setPatientFormData] = React.useState(emptyPatient);
+  const [isDischargeDialogOpen, setIsDischargeDialogOpen] = React.useState(false);
+  
+  const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
+  const [patientFormData, setPatientFormData] = React.useState<Omit<Patient, 'id'>>(emptyPatient);
+  const [dischargeAdvice, setDischargeAdvice] = React.useState('');
 
   const handleEditClick = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -113,8 +130,14 @@ export default function PatientsPage() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleDischargeClick = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setDischargeAdvice(patient.adviceOnDischarge || '');
+    setIsDischargeDialogOpen(true);
+  };
+
   const handleFormChange = (
-    e: React.ChangeEvent<HTMLInputElement> | string,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | string,
     field: keyof typeof patientFormData
   ) => {
     if (typeof e === 'string') {
@@ -132,7 +155,7 @@ export default function PatientsPage() {
 
   const handleAddPatient = () => {
     const newIdNumber =
-      Math.max(...patients.map((p) => parseInt(p.id.split('-')[1], 10))) + 1;
+      Math.max(0, ...patients.map((p) => parseInt(p.id.split('-')[1], 10))) + 1;
     const newPatient: Patient = {
       ...patientFormData,
       id: `PAT-${String(newIdNumber).padStart(3, '0')}`,
@@ -147,7 +170,7 @@ export default function PatientsPage() {
     setPatients(
       patients.map((p) =>
         p.id === selectedPatient.id
-          ? { ...p, ...(patientFormData as Patient) }
+          ? { ...selectedPatient, ...patientFormData }
           : p
       )
     );
@@ -162,10 +185,26 @@ export default function PatientsPage() {
     setSelectedPatient(null);
   };
 
+  const handleDischargeConfirm = () => {
+    if (!selectedPatient) return;
+    setPatients(
+      patients.map((p) =>
+        p.id === selectedPatient.id
+          ? { ...p, status: 'Discharged', adviceOnDischarge: dischargeAdvice }
+          : p
+      )
+    );
+    setIsDischargeDialogOpen(false);
+    setSelectedPatient(null);
+  };
+
   const columns = React.useMemo(
-    () => getColumns({ onEdit: handleEditClick, onDelete: handleDeleteClick }),
+    () => getColumns({ onEdit: handleEditClick, onDelete: handleDeleteClick, onDischarge: handleDischargeClick }),
     []
   );
+
+  const currentPatients = patients.filter(p => p.status === 'Active' || p.status === 'Deceased');
+  const dischargedPatients = patients.filter(p => p.status === 'Discharged');
 
   return (
     <div>
@@ -180,7 +219,7 @@ export default function PatientsPage() {
               Add Patient
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Patient</DialogTitle>
               <DialogDescription>
@@ -190,31 +229,17 @@ export default function PatientsPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={patientFormData.name}
-                  onChange={(e) => handleFormChange(e, 'name')}
-                />
+                <Input id="name" value={patientFormData.name} onChange={(e) => handleFormChange(e, 'name')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="age">Age</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    value={patientFormData.age}
-                    onChange={(e) => handleFormChange(e, 'age')}
-                  />
+                  <Input id="age" type="number" value={patientFormData.age} onChange={(e) => handleFormChange(e, 'age')} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sex">Sex</Label>
-                  <Select
-                    value={patientFormData.sex}
-                    onValueChange={(value) => handleFormChange(value, 'sex')}
-                  >
-                    <SelectTrigger id="sex">
-                      <SelectValue placeholder="Select sex" />
-                    </SelectTrigger>
+                  <Select value={patientFormData.sex} onValueChange={(value) => handleFormChange(value, 'sex')}>
+                    <SelectTrigger id="sex"><SelectValue placeholder="Select sex" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Male">Male</SelectItem>
                       <SelectItem value="Female">Female</SelectItem>
@@ -225,105 +250,124 @@ export default function PatientsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="diagnosis">Diagnosis</Label>
-                <Input
-                  id="diagnosis"
-                  value={patientFormData.diagnosis}
-                  onChange={(e) => handleFormChange(e, 'diagnosis')}
-                />
+                <Input id="diagnosis" value={patientFormData.diagnosis} onChange={(e) => handleFormChange(e, 'diagnosis')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="treatment">Treatment</Label>
-                <Input
-                  id="treatment"
-                  value={patientFormData.treatment}
-                  onChange={(e) => handleFormChange(e, 'treatment')}
-                />
+                <Input id="treatment" value={patientFormData.treatment} onChange={(e) => handleFormChange(e, 'treatment')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="presenting-complaints">Presenting Complaints</Label>
+                <Textarea id="presenting-complaints" value={patientFormData.presentingComplaints} onChange={(e) => handleFormChange(e, 'presentingComplaints')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="comorbidities">Comorbidities</Label>
+                <Textarea id="comorbidities" value={patientFormData.comorbidities} onChange={(e) => handleFormChange(e, 'comorbidities')} />
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
+              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
               <Button onClick={handleAddPatient}>Add Patient</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </PageHeader>
 
+      <Tabs defaultValue="current">
+        <TabsList>
+          <TabsTrigger value="current">Current Patients</TabsTrigger>
+          <TabsTrigger value="discharged">Discharged Patients</TabsTrigger>
+        </TabsList>
+        <TabsContent value="current">
+          <DataTable columns={columns} data={currentPatients} />
+        </TabsContent>
+        <TabsContent value="discharged">
+          <DataTable columns={columns} data={dischargedPatients} />
+        </TabsContent>
+      </Tabs>
+
+
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Patient: {selectedPatient?.name}</DialogTitle>
             <DialogDescription>Update patient details below.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={patientFormData.name}
-                onChange={(e) => handleFormChange(e, 'name')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-age">Age</Label>
-                <Input
-                  id="edit-age"
-                  type="number"
-                  value={patientFormData.age}
-                  onChange={(e) => handleFormChange(e, 'age')}
-                />
+             <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input id="edit-name" value={patientFormData.name} onChange={(e) => handleFormChange(e, 'name')} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-age">Age</Label>
+                  <Input id="edit-age" type="number" value={patientFormData.age} onChange={(e) => handleFormChange(e, 'age')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sex">Sex</Label>
+                  <Select value={patientFormData.sex} onValueChange={(value) => handleFormChange(value, 'sex')}>
+                    <SelectTrigger id="edit-sex"><SelectValue placeholder="Select sex" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-sex">Sex</Label>
-                <Select
-                  value={patientFormData.sex}
-                  onValueChange={(value) => handleFormChange(value, 'sex')}
-                >
-                  <SelectTrigger id="edit-sex">
-                    <SelectValue placeholder="Select sex" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-diagnosis">Diagnosis</Label>
+                <Input id="edit-diagnosis" value={patientFormData.diagnosis} onChange={(e) => handleFormChange(e, 'diagnosis')} />
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-treatment">Treatment</Label>
+                <Input id="edit-treatment" value={patientFormData.treatment} onChange={(e) => handleFormChange(e, 'treatment')} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="edit-presenting-complaints">Presenting Complaints</Label>
+                <Textarea id="edit-presenting-complaints" value={patientFormData.presentingComplaints} onChange={(e) => handleFormChange(e, 'presentingComplaints')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-comorbidities">Comorbidities</Label>
+                <Textarea id="edit-comorbidities" value={patientFormData.comorbidities} onChange={(e) => handleFormChange(e, 'comorbidities')} />
+              </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleUpdatePatient}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Discharge Dialog */}
+      <Dialog open={isDischargeDialogOpen} onOpenChange={setIsDischargeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discharge Patient: {selectedPatient?.name}</DialogTitle>
+            <DialogDescription>Add discharge advice and confirm to discharge the patient.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-diagnosis">Diagnosis</Label>
-              <Input
-                id="edit-diagnosis"
-                value={patientFormData.diagnosis}
-                onChange={(e) => handleFormChange(e, 'diagnosis')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-treatment">Treatment</Label>
-              <Input
-                id="edit-treatment"
-                value={patientFormData.treatment}
-                onChange={(e) => handleFormChange(e, 'treatment')}
+              <Label htmlFor="discharge-advice">Advice on Discharge</Label>
+              <Textarea
+                id="discharge-advice"
+                value={dischargeAdvice}
+                onChange={(e) => setDischargeAdvice(e.target.value)}
+                placeholder="e.g., Continue medication, schedule follow-up..."
+                rows={4}
               />
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleUpdatePatient}>Save Changes</Button>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleDischargeConfirm} variant="secondary">Confirm Discharge</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -334,14 +378,11 @@ export default function PatientsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
-              Continue
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Continue</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <DataTable columns={columns} data={patients} />
     </div>
   );
 }
