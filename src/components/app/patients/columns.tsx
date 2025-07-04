@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export type Patient = {
   id: string
@@ -26,6 +25,8 @@ export type Patient = {
   presentingComplaints: string
   comorbidities: string
   adviceOnDischarge?: string
+  admissionDate: Date
+  dischargeDate?: Date
 }
 
 const statusVariantMap: { [key in Patient["status"]]: "default" | "secondary" | "destructive" } = {
@@ -77,13 +78,7 @@ export const getColumns = ({ onEdit, onDelete, onDischarge }: GetColumnsProps): 
       )
     },
     cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-            <Avatar>
-                <AvatarImage src={`https://placehold.co/40x40.png`} alt={row.getValue("name")} data-ai-hint="person portrait" />
-                <AvatarFallback>{(row.getValue("name") as string).substring(0,2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="font-medium">{row.getValue("name")}</div>
-        </div>
+        <div className="font-medium">{row.getValue("name")}</div>
     ),
   },
   {
@@ -115,6 +110,7 @@ export const getColumns = ({ onEdit, onDelete, onDischarge }: GetColumnsProps): 
     cell: ({ row }) => {
       const patient = row.original
       const isDischarged = patient.status === 'Discharged';
+      const isDeceased = patient.status === 'Deceased';
 
       return (
         <div className="text-right">
@@ -133,12 +129,12 @@ export const getColumns = ({ onEdit, onDelete, onDischarge }: GetColumnsProps): 
                 Copy patient ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onEdit(patient)}>
-                Edit record
+              <DropdownMenuItem onClick={() => onEdit(patient)} disabled={isDeceased}>
+                {isDischarged ? "View Details" : "Edit record"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDischarge(patient)}
-                disabled={isDischarged}
+                disabled={isDischarged || isDeceased}
               >
                 Discharge Patient
               </DropdownMenuItem>

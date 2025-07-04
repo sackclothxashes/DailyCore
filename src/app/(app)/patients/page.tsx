@@ -33,10 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar";
+import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { Patient, getColumns } from '@/components/app/patients/columns';
 import { DataTable } from '@/components/app/patients/data-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+
 
 const initialPatients: Patient[] = [
   {
@@ -49,6 +53,7 @@ const initialPatients: Patient[] = [
     status: 'Active',
     presentingComplaints: 'Headaches, dizziness',
     comorbidities: 'None',
+    admissionDate: new Date('2024-07-10'),
   },
   {
     id: 'PAT-002',
@@ -60,6 +65,7 @@ const initialPatients: Patient[] = [
     status: 'Active',
     presentingComplaints: 'Fatigue, frequent urination',
     comorbidities: 'Obesity',
+    admissionDate: new Date('2024-07-12'),
   },
   {
     id: 'PAT-003',
@@ -72,6 +78,8 @@ const initialPatients: Patient[] = [
     presentingComplaints: 'Cough, fever, shortness of breath',
     comorbidities: 'COPD',
     adviceOnDischarge: 'Continue full course of antibiotics. Follow up in 1 week.',
+    admissionDate: new Date('2024-07-01'),
+    dischargeDate: new Date('2024-07-08'),
   },
   {
     id: 'PAT-004',
@@ -83,6 +91,7 @@ const initialPatients: Patient[] = [
     status: 'Deceased',
     presentingComplaints: 'Shortness of breath, swelling in legs',
     comorbidities: 'Kidney disease',
+    admissionDate: new Date('2024-06-20'),
   },
   {
     id: 'PAT-005',
@@ -94,10 +103,11 @@ const initialPatients: Patient[] = [
     status: 'Active',
     presentingComplaints: 'Wheezing, chest tightness',
     comorbidities: 'Allergic rhinitis',
+    admissionDate: new Date('2024-07-15'),
   },
 ];
 
-const emptyPatient: Omit<Patient, 'id' | 'status'> = {
+const emptyPatient: Omit<Patient, 'id' | 'status' | 'dischargeDate'> = {
   name: '',
   age: 0,
   sex: 'Other',
@@ -106,6 +116,7 @@ const emptyPatient: Omit<Patient, 'id' | 'status'> = {
   presentingComplaints: '',
   comorbidities: '',
   adviceOnDischarge: '',
+  admissionDate: new Date(),
 };
 
 export default function PatientsPage() {
@@ -116,8 +127,12 @@ export default function PatientsPage() {
   const [isDischargeDialogOpen, setIsDischargeDialogOpen] = React.useState(false);
   
   const [selectedPatient, setSelectedPatient] = React.useState<Patient | null>(null);
-  const [patientFormData, setPatientFormData] = React.useState<Omit<Patient, 'id'>>(emptyPatient);
+  const [patientFormData, setPatientFormData] = React.useState<Omit<Patient, 'id' | 'status'>>(emptyPatient);
   const [dischargeAdvice, setDischargeAdvice] = React.useState('');
+
+  const [showAdmissionDatePicker, setShowAdmissionDatePicker] = React.useState(false);
+  const [showEditAdmissionDatePicker, setShowEditAdmissionDatePicker] = React.useState(false);
+
 
   const handleEditClick = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -190,7 +205,7 @@ export default function PatientsPage() {
     setPatients(
       patients.map((p) =>
         p.id === selectedPatient.id
-          ? { ...p, status: 'Discharged', adviceOnDischarge: dischargeAdvice }
+          ? { ...p, status: 'Discharged', adviceOnDischarge: dischargeAdvice, dischargeDate: new Date() }
           : p
       )
     );
@@ -214,7 +229,10 @@ export default function PatientsPage() {
       >
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setPatientFormData(emptyPatient)}>
+            <Button onClick={() => {
+              setPatientFormData(emptyPatient);
+              setShowAdmissionDatePicker(false);
+            }}>
               <PlusCircle className="mr-2" />
               Add Patient
             </Button>
@@ -247,6 +265,31 @@ export default function PatientsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Admission Date</Label>
+                 <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !patientFormData.admissionDate && "text-muted-foreground"
+                    )}
+                    onClick={() => setShowAdmissionDatePicker(!showAdmissionDatePicker)}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {patientFormData.admissionDate ? format(patientFormData.admissionDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                  {showAdmissionDatePicker && (
+                    <Calendar
+                      mode="single"
+                      selected={patientFormData.admissionDate}
+                      onSelect={(date) => {
+                        setPatientFormData(prev => ({ ...prev, admissionDate: date || new Date() }));
+                        setShowAdmissionDatePicker(false);
+                      }}
+                      initialFocus
+                    />
+                  )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="diagnosis">Diagnosis</Label>
@@ -291,51 +334,96 @@ export default function PatientsPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Patient: {selectedPatient?.name}</DialogTitle>
-            <DialogDescription>Update patient details below.</DialogDescription>
+            <DialogTitle>{selectedPatient?.status === 'Discharged' ? 'Patient Details' : 'Edit Patient'}: {selectedPatient?.name}</DialogTitle>
+            <DialogDescription>
+              {selectedPatient?.status === 'Discharged' ? 'Viewing details for a discharged patient.' : 'Update patient details below.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-             <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input id="edit-name" value={patientFormData.name} onChange={(e) => handleFormChange(e, 'name')} />
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input id="edit-name" value={patientFormData.name} onChange={(e) => handleFormChange(e, 'name')} disabled={selectedPatient?.status === 'Discharged'} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-age">Age</Label>
+                <Input id="edit-age" type="number" value={patientFormData.age} onChange={(e) => handleFormChange(e, 'age')} disabled={selectedPatient?.status === 'Discharged'} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-sex">Sex</Label>
+                <Select value={patientFormData.sex} onValueChange={(value) => handleFormChange(value, 'sex')} disabled={selectedPatient?.status === 'Discharged'}>
+                  <SelectTrigger id="edit-sex"><SelectValue placeholder="Select sex" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-age">Age</Label>
-                  <Input id="edit-age" type="number" value={patientFormData.age} onChange={(e) => handleFormChange(e, 'age')} />
+                    <Label>Admission Date</Label>
+                    <Button
+                        variant={"outline"}
+                        className={cn( "w-full justify-start text-left font-normal", !patientFormData.admissionDate && "text-muted-foreground")}
+                        onClick={() => setShowEditAdmissionDatePicker(!showEditAdmissionDatePicker)}
+                        disabled={selectedPatient?.status === 'Discharged'}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {patientFormData.admissionDate ? format(patientFormData.admissionDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                    {showEditAdmissionDatePicker && (
+                        <Calendar
+                        mode="single"
+                        selected={patientFormData.admissionDate}
+                        onSelect={(date) => {
+                            setPatientFormData(prev => ({ ...prev, admissionDate: date || new Date() }));
+                            setShowEditAdmissionDatePicker(false);
+                        }}
+                        initialFocus
+                        />
+                    )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-sex">Sex</Label>
-                  <Select value={patientFormData.sex} onValueChange={(value) => handleFormChange(value, 'sex')}>
-                    <SelectTrigger id="edit-sex"><SelectValue placeholder="Select sex" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-diagnosis">Diagnosis</Label>
-                <Input id="edit-diagnosis" value={patientFormData.diagnosis} onChange={(e) => handleFormChange(e, 'diagnosis')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-treatment">Treatment</Label>
-                <Input id="edit-treatment" value={patientFormData.treatment} onChange={(e) => handleFormChange(e, 'treatment')} />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="edit-presenting-complaints">Presenting Complaints</Label>
-                <Textarea id="edit-presenting-complaints" value={patientFormData.presentingComplaints} onChange={(e) => handleFormChange(e, 'presentingComplaints')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-comorbidities">Comorbidities</Label>
-                <Textarea id="edit-comorbidities" value={patientFormData.comorbidities} onChange={(e) => handleFormChange(e, 'comorbidities')} />
-              </div>
+                 {selectedPatient?.dischargeDate && (
+                    <div className="space-y-2">
+                        <Label>Discharge Date</Label>
+                        <Input value={format(selectedPatient.dischargeDate, "PPP")} disabled />
+                    </div>
+                )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-diagnosis">Diagnosis</Label>
+              <Input id="edit-diagnosis" value={patientFormData.diagnosis} onChange={(e) => handleFormChange(e, 'diagnosis')} disabled={selectedPatient?.status === 'Discharged'} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-treatment">Treatment</Label>
+              <Input id="edit-treatment" value={patientFormData.treatment} onChange={(e) => handleFormChange(e, 'treatment')} disabled={selectedPatient?.status === 'Discharged'} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-presenting-complaints">Presenting Complaints</Label>
+              <Textarea id="edit-presenting-complaints" value={patientFormData.presentingComplaints} onChange={(e) => handleFormChange(e, 'presentingComplaints')} disabled={selectedPatient?.status === 'Discharged'} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-comorbidities">Comorbidities</Label>
+              <Textarea id="edit-comorbidities" value={patientFormData.comorbidities} onChange={(e) => handleFormChange(e, 'comorbidities')} disabled={selectedPatient?.status === 'Discharged'} />
+            </div>
+            {selectedPatient?.adviceOnDischarge && (
+                 <div className="space-y-2">
+                    <Label htmlFor="edit-advice">Advice on Discharge</Label>
+                    <Textarea id="edit-advice" value={selectedPatient.adviceOnDischarge} disabled rows={4} />
+                 </div>
+            )}
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleUpdatePatient}>Save Changes</Button>
+            {selectedPatient?.status === 'Discharged' ? (
+                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+            ) : (
+                <>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleUpdatePatient}>Save Changes</Button>
+                </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
