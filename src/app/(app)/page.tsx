@@ -85,8 +85,6 @@ export default function DashboardPage() {
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalStartDate, setNewGoalStartDate] = useState<Date | undefined>();
   const [newGoalEndDate, setNewGoalEndDate] = useState<Date | undefined>();
-  const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
-  const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
 
   const handleAddGoal = () => {
     if (newGoalTitle && newGoalStartDate && newGoalEndDate) {
@@ -160,7 +158,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen} modal={false}>
+              <Popover modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -177,10 +175,7 @@ export default function DashboardPage() {
                   <Calendar
                     mode="single"
                     selected={newGoalStartDate}
-                    onSelect={(date) => {
-                      setNewGoalStartDate(date)
-                      setIsStartDatePopoverOpen(false)
-                    }}
+                    onSelect={setNewGoalStartDate}
                     initialFocus
                   />
                 </PopoverContent>
@@ -188,7 +183,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-               <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen} modal={false}>
+               <Popover modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -205,10 +200,7 @@ export default function DashboardPage() {
                   <Calendar
                     mode="single"
                     selected={newGoalEndDate}
-                    onSelect={(date) => {
-                      setNewGoalEndDate(date)
-                      setIsEndDatePopoverOpen(false)
-                    }}
+                    onSelect={setNewGoalEndDate}
                     initialFocus
                   />
                 </PopoverContent>
