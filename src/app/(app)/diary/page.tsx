@@ -32,7 +32,7 @@ const initialImages: Snapshot[] = Array.from({ length: 21 }, (_, i) => ({
   id: i + 1,
   src: `https://placehold.co/600x400.png?text=Day+${i + 1}`,
   alt: `Snapshot for day ${i + 1}`,
-  date: `July ${i + 1}, 2024`,
+  date: `July ${i + 1}, 2025`,
   hint: `day ${i+1}`,
   notes: ""
 }));
