@@ -31,7 +31,12 @@ const statusVariantMap: { [key in Patient["status"]]: "default" | "secondary" | 
     Deceased: "destructive",
 };
 
-export const columns: ColumnDef<Patient>[] = [
+type GetColumnsProps = {
+  onEdit: (patient: Patient) => void;
+  onDelete: (patient: Patient) => void;
+}
+
+export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Patient>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -90,6 +95,10 @@ export const columns: ColumnDef<Patient>[] = [
     header: "Diagnosis",
   },
   {
+    accessorKey: "treatment",
+    header: "Treatment",
+  },
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
@@ -102,26 +111,34 @@ export const columns: ColumnDef<Patient>[] = [
     cell: ({ row }) => {
       const patient = row.original
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(patient.id)}
-            >
-              Copy patient ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View full record</DropdownMenuItem>
-            <DropdownMenuItem>Edit record</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete record</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(patient.id)}
+              >
+                Copy patient ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onEdit(patient)}>
+                Edit record
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={() => onDelete(patient)}
+              >
+                Delete record
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )
     },
   },
