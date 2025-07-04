@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/page-header";
 
 const summaryData = [
   { title: "Total Balance", value: "INR 0", description: "Across 0 accounts", Icon: LineChart },
@@ -49,15 +50,10 @@ export default function BudgetPage() {
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center gap-4">
-                <div className="bg-primary p-3 rounded-full flex items-center justify-center">
-                    <Banknote className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Budget Tracker</h1>
-                    <p className="text-muted-foreground">Manage your finances and track expenses in INR</p>
-                </div>
-            </div>
+            <PageHeader 
+                title="Budget Tracker"
+                description="Manage your finances and track expenses in INR"
+            />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {summaryData.map(item => (
@@ -75,7 +71,7 @@ export default function BudgetPage() {
             </div>
 
             <Tabs defaultValue="overview" className="w-full">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="accounts">Accounts</TabsTrigger>
                     <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -83,7 +79,7 @@ export default function BudgetPage() {
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="mt-6">
-                    <div className="rounded-lg bg-card p-6 flex items-center justify-between">
+                    <div className="rounded-lg bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <Landmark className="h-8 w-8 text-muted-foreground" />
                             <div>
@@ -91,7 +87,7 @@ export default function BudgetPage() {
                                 <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
                             </div>
                         </div>
-                        <Button>
+                        <Button className="w-full sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" />
                             Setup Budget
                         </Button>
