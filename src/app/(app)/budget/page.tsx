@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, LineChart, CreditCard, Landmark, Plus, Banknote } from "lucide-react";
+import { DollarSign, LineChart, CreditCard, Landmark, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +46,7 @@ export default function BudgetPage() {
     const [accounts, setAccounts] = useState(initialAccounts);
     const [expenses, setExpenses] = useState(initialExpenses);
     const [deposits, setDeposits] = useState(initialDeposits);
+    const [currentView, setCurrentView] = useState('overview');
 
     return (
         <div className="space-y-8">
@@ -70,211 +70,225 @@ export default function BudgetPage() {
                 ))}
             </div>
 
-            <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="accounts">Accounts</TabsTrigger>
-                    <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                    <TabsTrigger value="deposits">Deposits</TabsTrigger>
-                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                </TabsList>
-                <TabsContent value="overview" className="mt-6">
-                    <div className="rounded-lg bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <Landmark className="h-8 w-8 text-muted-foreground" />
-                            <div>
-                                <h3 className="font-semibold text-card-foreground text-lg">Budget Setup</h3>
-                                <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
-                            </div>
-                        </div>
-                        <Button className="w-full sm:w-auto">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Setup Budget
-                        </Button>
-                    </div>
+            <Select value={currentView} onValueChange={setCurrentView}>
+                <SelectTrigger className="w-full md:max-w-xs">
+                    <SelectValue placeholder="Select a view" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="overview">Overview</SelectItem>
+                    <SelectItem value="accounts">Accounts</SelectItem>
+                    <SelectItem value="expenses">Expenses</SelectItem>
+                    <SelectItem value="deposits">Deposits</SelectItem>
+                    <SelectItem value="analytics">Analytics</SelectItem>
+                </SelectContent>
+            </Select>
 
-                    <div className="flex flex-col items-center justify-center gap-2 text-center py-20">
-                        <LineChart className="w-20 h-20 text-muted-foreground/50" />
-                        <p className="text-muted-foreground mt-4">Your financial overview will appear here.</p>
-                    </div>
-                </TabsContent>
-                <TabsContent value="accounts">
-                    <div className="flex justify-end mb-4">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Account</DialogTitle>
-                                    <DialogDescription>Enter the details of your new account.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="acc-name">Account Name</Label>
-                                        <Input id="acc-name" placeholder="e.g., Savings Account" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="acc-type">Account Type</Label>
-                                        <Select>
-                                            <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="savings">Savings</SelectItem>
-                                                <SelectItem value="checking">Checking</SelectItem>
-                                                <SelectItem value="credit">Credit Card</SelectItem>
-                                                <SelectItem value="investment">Investment</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
-                                        <Input id="acc-balance" type="number" placeholder="e.g., 50000" />
-                                    </div>
+            <div className="mt-6">
+                {currentView === 'overview' && (
+                    <div className="space-y-6">
+                        <div className="rounded-lg bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <Landmark className="h-8 w-8 text-muted-foreground" />
+                                <div>
+                                    <h3 className="font-semibold text-card-foreground text-lg">Budget Setup</h3>
+                                    <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
                                 </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                    </DialogClose>
-                                    <Button>Add Account</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                            </div>
+                            <Button className="w-full sm:w-auto">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Setup Budget
+                            </Button>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center gap-2 text-center py-20">
+                            <LineChart className="w-20 h-20 text-muted-foreground/50" />
+                            <p className="text-muted-foreground mt-4">Your financial overview will appear here.</p>
+                        </div>
                     </div>
-                    <Card>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Account Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead className="text-right">Balance (INR)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {accounts.map((acc, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell className="font-medium">{acc.name}</TableCell>
-                                        <TableCell><Badge variant="outline">{acc.type}</Badge></TableCell>
-                                        <TableCell className="text-right">{Number(acc.balance).toLocaleString()}</TableCell>
+                )}
+                {currentView === 'accounts' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Account</DialogTitle>
+                                        <DialogDescription>Enter the details of your new account.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="acc-name">Account Name</Label>
+                                            <Input id="acc-name" placeholder="e.g., Savings Account" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="acc-type">Account Type</Label>
+                                            <Select>
+                                                <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="savings">Savings</SelectItem>
+                                                    <SelectItem value="checking">Checking</SelectItem>
+                                                    <SelectItem value="credit">Credit Card</SelectItem>
+                                                    <SelectItem value="investment">Investment</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
+                                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button variant="outline">Cancel</Button>
+                                        </DialogClose>
+                                        <Button>Add Account</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <Card>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Account Name</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead className="text-right">Balance (INR)</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="expenses">
-                     <div className="flex justify-end mb-4">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="destructive"><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Expense</DialogTitle>
-                                    <DialogDescription>Enter the details of your new expense.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="exp-desc">Description</Label>
-                                        <Input id="exp-desc" placeholder="e.g., Coffee" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="exp-cat">Category</Label>
-                                        <Input id="exp-cat" placeholder="e.g., Food" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="exp-amount">Amount (INR)</Label>
-                                        <Input id="exp-amount" type="number" placeholder="e.g., 300" />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                    </DialogClose>
-                                    <Button variant="destructive">Add Expense</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                                </TableHeader>
+                                <TableBody>
+                                    {accounts.map((acc, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{acc.name}</TableCell>
+                                            <TableCell><Badge variant="outline">{acc.type}</Badge></TableCell>
+                                            <TableCell className="text-right">{Number(acc.balance).toLocaleString()}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
                     </div>
-                    <Card>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead className="text-right">Amount (INR)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {expenses.map((exp, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell className="font-medium">{exp.description}</TableCell>
-                                        <TableCell><Badge>{exp.category}</Badge></TableCell>
-                                        <TableCell>{exp.date}</TableCell>
-                                        <TableCell className="text-right text-destructive">- {Number(exp.amount).toLocaleString()}</TableCell>
+                )}
+                {currentView === 'expenses' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="destructive"><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Expense</DialogTitle>
+                                        <DialogDescription>Enter the details of your new expense.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="exp-desc">Description</Label>
+                                            <Input id="exp-desc" placeholder="e.g., Coffee" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="exp-cat">Category</Label>
+                                            <Input id="exp-cat" placeholder="e.g., Food" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="exp-amount">Amount (INR)</Label>
+                                            <Input id="exp-amount" type="number" placeholder="e.g., 300" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button variant="outline">Cancel</Button>
+                                        </DialogClose>
+                                        <Button variant="destructive">Add Expense</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <Card>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="deposits">
-                     <div className="flex justify-end mb-4">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button><Plus className="mr-2 h-4 w-4" /> Add Deposit</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Deposit</DialogTitle>
-                                    <DialogDescription>Enter the details of your new deposit.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="dep-desc">Description</Label>
-                                        <Input id="dep-desc" placeholder="e.g., Monthly Salary" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="dep-amount">Amount (INR)</Label>
-                                        <Input id="dep-amount" type="number" placeholder="e.g., 75000" />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                     <DialogClose asChild>
-                                        <Button variant="outline">Cancel</Button>
-                                    </DialogClose>
-                                    <Button>Add Deposit</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                                </TableHeader>
+                                <TableBody>
+                                    {expenses.map((exp, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{exp.description}</TableCell>
+                                            <TableCell><Badge>{exp.category}</Badge></TableCell>
+                                            <TableCell>{exp.date}</TableCell>
+                                            <TableCell className="text-right text-destructive">- {Number(exp.amount).toLocaleString()}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
                     </div>
-                    <Card>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead className="text-right">Amount (INR)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {deposits.map((dep, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell className="font-medium">{dep.description}</TableCell>
-                                        <TableCell>{dep.date}</TableCell>
-                                        <TableCell className="text-right text-primary">+ {Number(dep.amount).toLocaleString()}</TableCell>
+                )}
+                {currentView === 'deposits' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button><Plus className="mr-2 h-4 w-4" /> Add Deposit</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Deposit</DialogTitle>
+                                        <DialogDescription>Enter the details of your new deposit.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dep-desc">Description</Label>
+                                            <Input id="dep-desc" placeholder="e.g., Monthly Salary" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dep-amount">Amount (INR)</Label>
+                                            <Input id="dep-amount" type="number" placeholder="e.g., 75000" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button variant="outline">Cancel</Button>
+                                        </DialogClose>
+                                        <Button>Add Deposit</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <Card>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="analytics">
+                                </TableHeader>
+                                <TableBody>
+                                    {deposits.map((dep, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{dep.description}</TableCell>
+                                            <TableCell>{dep.date}</TableCell>
+                                            <TableCell className="text-right text-primary">+ {Number(dep.amount).toLocaleString()}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
+                    </div>
+                )}
+                {currentView === 'analytics' && (
                     <div className="flex flex-col items-center justify-center gap-2 text-center py-20">
                         <p className="text-muted-foreground">Analytics are not yet available.</p>
                     </div>
-                </TabsContent>
-            </Tabs>
+                )}
+            </div>
         </div>
     );
 }
