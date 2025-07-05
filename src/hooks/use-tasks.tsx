@@ -1,7 +1,28 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ClipboardCheck, Brain, Droplets, Dumbbell, BookOpen, Repeat, Coffee } from 'lucide-react';
+import { 
+  ClipboardCheck, 
+  Brain, 
+  Droplets, 
+  Dumbbell, 
+  BookOpen, 
+  Repeat, 
+  Coffee,
+  Bed,
+  Utensils,
+  Heart,
+  Sprout,
+  Paintbrush,
+  Music,
+  Code,
+  Smile,
+  Sunrise,
+  Sunset,
+  Dog,
+  Cat,
+  Route
+} from 'lucide-react';
 
 // Define the icons that can be used for tasks
 export const taskIcons = {
@@ -12,6 +33,19 @@ export const taskIcons = {
   'BookOpen': BookOpen,
   'Repeat': Repeat,
   'Coffee': Coffee,
+  'Bed': Bed,
+  'Utensils': Utensils,
+  'Heart': Heart,
+  'Sprout': Sprout,
+  'Paintbrush': Paintbrush,
+  'Music': Music,
+  'Code': Code,
+  'Smile': Smile,
+  'Sunrise': Sunrise,
+  'Sunset': Sunset,
+  'Dog': Dog,
+  'Cat': Cat,
+  'Route': Route,
 };
 
 export type TaskIconName = keyof typeof taskIcons;
