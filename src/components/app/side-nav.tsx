@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -19,6 +20,7 @@ import {
   Camera,
   Settings,
   CircleHelp,
+  CalendarDays,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +30,7 @@ const navItems = [
   { href: "/planner", label: "Daily Planner", icon: CalendarCheck },
   { href: "/patients", label: "Patient Log", icon: User },
   { href: "/diary", label: "Daily Snapshots", icon: Camera },
+  { href: "/attendance", label: "Attendance", icon: CalendarDays },
 ];
 
 export function SideNav() {
