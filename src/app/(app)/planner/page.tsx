@@ -5,25 +5,69 @@ import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Flame, Dumbbell, BookOpen, Droplets, PlusCircle } from "lucide-react";
+import { Flame, PlusCircle, Trash2, ClipboardCheck } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-const dailyTasks = [
-  { id: 'task-1', title: 'Morning Exercise', icon: Dumbbell, streak: 12 },
-  { id: 'task-2', title: 'Read 10 pages', icon: BookOpen, streak: 5 },
-  { id: 'task-3', title: 'Drink 8 glasses of water', icon: Droplets, streak: 25 },
-];
+type DailyTask = {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  streak: number;
+  completed: boolean;
+};
+
 
 export default function PlannerPage() {
   const [currentDateString, setCurrentDateString] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [tasks, setTasks] = useState<DailyTask[]>([]);
+  
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
 
   useEffect(() => {
     const today = new Date();
     setSelectedDate(today);
     setCurrentDateString(today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
   }, []);
+
+  const handleAddTask = () => {
+    if (!newTaskTitle.trim()) return;
+
+    const newTask: DailyTask = {
+      id: `task-${Date.now()}`,
+      title: newTaskTitle,
+      icon: ClipboardCheck,
+      streak: 0,
+      completed: false
+    };
+
+    setTasks([...tasks, newTask]);
+    setNewTaskTitle('');
+    setIsAddTaskOpen(false);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTasks(tasks.filter(task => task.id !== taskId));
+  };
+  
+  const handleToggleCompletion = (taskId: string) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
+  };
 
 
   return (
@@ -41,33 +85,74 @@ export default function PlannerPage() {
                   <CardTitle>Today's Plan</CardTitle>
                   <CardDescription>{currentDateString || 'Loading...'}</CardDescription>
                 </div>
-                <Button variant="outline" size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Task
-                </Button>
+                <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+                  <DialogTrigger asChild>
+                     <Button variant="outline" size="sm">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Task
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Daily Task</DialogTitle>
+                      <DialogDescription>
+                        What new habit are you building?
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                       <div className="space-y-2">
+                          <Label htmlFor="task-title">Task Title</Label>
+                          <Input
+                            id="task-title"
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            placeholder="e.g., Meditate for 10 minutes"
+                          />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button onClick={handleAddTask}>Add Task</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-4">
-                {dailyTasks.map((task, index) => (
-                  <>
-                    <li key={task.id} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
-                      <div className="flex items-center gap-4">
-                        <Checkbox id={task.id} />
-                        <label htmlFor={task.id} className="flex items-center gap-3 cursor-pointer">
-                          <task.icon className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">{task.title}</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 text-orange-500">
-                        <Flame className="w-5 h-5" />
-                        <span className="font-semibold">{task.streak}</span>
-                      </div>
-                    </li>
-                    {index < dailyTasks.length - 1 && <Separator />}
-                  </>
-                ))}
-              </ul>
+              {tasks.length > 0 ? (
+                <ul className="space-y-4">
+                  {tasks.map((task, index) => (
+                    <React.Fragment key={task.id}>
+                      <li className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
+                        <div className="flex items-center gap-4">
+                          <Checkbox id={task.id} checked={task.completed} onCheckedChange={() => handleToggleCompletion(task.id)} />
+                          <label htmlFor={task.id} className="flex items-center gap-3 cursor-pointer">
+                            <task.icon className="w-5 h-5 text-muted-foreground" />
+                            <span className="font-medium">{task.title}</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 text-orange-500">
+                            <Flame className="w-5 h-5" />
+                            <span className="font-semibold">{task.streak}</span>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteTask(task.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </li>
+                      {index < tasks.length - 1 && <Separator />}
+                    </React.Fragment>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-muted-foreground py-10">
+                  <p>No tasks yet.</p>
+                  <p className="text-sm">Click "Add Task" to get started.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
