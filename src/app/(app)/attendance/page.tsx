@@ -66,6 +66,13 @@ export default function AttendancePage() {
         }, { present: 0, casual: 0, earned: 0 });
     }, [attendance]);
     
+    const progressDays = React.useMemo(() => {
+        const presentDays = attendanceCounts.present;
+        const totalLeaveDays = attendanceCounts.casual + attendanceCounts.earned;
+        const countableLeaveDays = Math.min(totalLeaveDays, 30);
+        return presentDays + countableLeaveDays;
+    }, [attendanceCounts]);
+
     const modifiers = React.useMemo(() => {
         const mods: Record<string, Date[]> = {
             Present: [],
@@ -99,12 +106,12 @@ export default function AttendancePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Total Days Present</CardTitle>
-                        <CardDescription>Goal: 730 days</CardDescription>
+                        <CardTitle>Goal Progress</CardTitle>
+                        <CardDescription>Goal: 730 days (Present + up to 30 leave days)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-3xl font-bold mb-2">{attendanceCounts.present}</p>
-                        <Progress value={(attendanceCounts.present / 730) * 100} />
+                        <p className="text-3xl font-bold mb-2">{progressDays}</p>
+                        <Progress value={(progressDays / 730) * 100} />
                     </CardContent>
                 </Card>
                 <Card>
