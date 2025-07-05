@@ -37,7 +37,7 @@ type Account = { name: string; type: string; balance: number };
 type Transaction = { description: string; amount: number; date: string };
 type Expense = Transaction & { category: string; accountName: string };
 type Income = Transaction & { accountName: string };
-type Investment = { description: string; amount: number; accountName: string; dayOfMonth: number };
+type InvestmentTransaction = { description: string; amount: number; date: string; sourceAccountName: string; };
 
 
 // --- Dynamic Initial Data ---
@@ -46,12 +46,12 @@ const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 const middleOfMonth = new Date(today.getFullYear(), today.getMonth(), 15);
 const yesterday = new Date();
 yesterday.setDate(today.getDate() - 1);
+const investmentDate = new Date(today.getFullYear(), today.getMonth(), 5);
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-const initialAccounts: Account[] = [
-    { name: "Main Bank", type: "Savings", balance: 70500 },
-    { name: "Credit Card", type: "Credit", balance: 0 },
+const initialIncomes: Income[] = [
+    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth), accountName: "Main Bank" },
 ];
 
 const initialExpenses: Expense[] = [
@@ -59,19 +59,22 @@ const initialExpenses: Expense[] = [
     { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDate(middleOfMonth), accountName: "Main Bank" },
 ];
 
-const initialIncomes: Income[] = [
-    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth), accountName: "Main Bank" },
+const initialInvestmentTransactions: InvestmentTransaction[] = [
+    { description: "Mutual Fund SIP", amount: 5000, date: formatDate(investmentDate), sourceAccountName: "Main Bank" },
 ];
 
-const initialInvestments: Investment[] = [
-    { description: "Mutual Fund SIP", amount: 5000, accountName: "Main Bank", dayOfMonth: 5 },
+// Consistent initial balances
+const initialAccounts: Account[] = [
+    { name: "Main Bank", type: "Savings", balance: 65500 }, // 75000 (income) - 3000 (exp) - 1500 (exp) - 5000 (inv)
+    { name: "Credit Card", type: "Credit", balance: 0 },
+    { name: "Mutual Fund SIP", type: "Investment", balance: 5000 },
 ];
 
 // --- Empty States for Forms ---
 const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
 const emptyIncome: Omit<Income, 'date'> = { description: '', amount: 0, accountName: '' };
-const emptyInvestment: Investment = { description: '', amount: 0, accountName: '', dayOfMonth: 1 };
+const emptyInvestment: Omit<InvestmentTransaction, 'date'> = { description: '', amount: 0, sourceAccountName: '' };
 
 
 export default function BudgetPage() {
@@ -79,7 +82,7 @@ export default function BudgetPage() {
     const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
     const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
-    const [investments, setInvestments] = useState<Investment[]>(initialInvestments);
+    const [investmentTransactions, setInvestmentTransactions] = useState<InvestmentTransaction[]>(initialInvestmentTransactions);
     const [currentView, setCurrentView] = useState('overview');
 
     // Dialog states
@@ -93,7 +96,7 @@ export default function BudgetPage() {
     const [newAccount, setNewAccount] = useState<Account>(emptyAccount);
     const [newExpense, setNewExpense] = useState(emptyExpense);
     const [newIncome, setNewIncome] = useState<Omit<Income, 'date'>>(emptyIncome);
-    const [newInvestment, setNewInvestment] = useState<Investment>(emptyInvestment);
+    const [newInvestment, setNewInvestment] = useState(emptyInvestment);
 
     // --- Corrected Financial Calculations ---
     const assetAccounts = useMemo(() => 
@@ -117,7 +120,7 @@ export default function BudgetPage() {
     );
 
     const netWorth = useMemo(() => totalAssets - totalLiabilities, [totalAssets, totalLiabilities]);
-    const totalAvailableBalance = useMemo(() => totalAssets, [totalAssets]);
+    const totalAvailableBalance = useMemo(() => accounts.filter(acc => acc.type === 'Savings' || acc.type === 'Checking').reduce((sum, acc) => sum + acc.balance, 0), [accounts]);
 
     const monthlyExpenses = useMemo(() => {
         const today = new Date();
@@ -135,17 +138,18 @@ export default function BudgetPage() {
         incomes.reduce((sum, inc) => sum + inc.amount, 0),
         [incomes]
     );
-
-    const monthlyInvestments = useMemo(() =>
-        investments.reduce((sum, inv) => sum + inv.amount, 0),
-        [investments]
+    
+    const totalInvestments = useMemo(() =>
+        accounts.filter(acc => acc.type === 'Investment').reduce((sum, acc) => sum + acc.balance, 0),
+        [accounts]
     );
 
+
     const summaryData = [
-      { title: "Total Available balance", value: `INR ${totalAvailableBalance.toLocaleString()}`, description: `From ${assetAccounts.length} asset account(s)`, Icon: LineChart },
+      { title: "Total Available balance", value: `INR ${totalAvailableBalance.toLocaleString()}`, description: `From savings/checking accounts`, Icon: LineChart },
       { title: "Total Income", value: `INR ${totalIncomes.toLocaleString()}`, description: "Total income received", Icon: DollarSign },
       { title: "Monthly Expenses", value: `INR ${monthlyExpenses.toLocaleString()}`, description: "This month's spending", Icon: CreditCard },
-      { title: "Monthly Investments", value: `INR ${monthlyInvestments.toLocaleString()}`, description: "Planned recurring debits", Icon: Briefcase },
+      { title: "Total Investments", value: `INR ${totalInvestments.toLocaleString()}`, description: "Value of all investments", Icon: Briefcase },
     ];
     
     const handleAddAccount = () => {
@@ -207,15 +211,45 @@ export default function BudgetPage() {
     };
 
     const handleAddInvestment = () => {
-        if (!newInvestment.description || !newInvestment.amount || !newInvestment.accountName || !newInvestment.dayOfMonth) {
+        if (!newInvestment.description || !newInvestment.amount || !newInvestment.sourceAccountName) {
             toast({ title: "Error", description: "Please fill in all investment details.", variant: "destructive" });
             return;
         }
-        if (newInvestment.dayOfMonth < 1 || newInvestment.dayOfMonth > 31) {
-            toast({ title: "Error", description: "Day of month must be between 1 and 31.", variant: "destructive" });
+        const sourceAccount = accounts.find(acc => acc.name === newInvestment.sourceAccountName);
+        if (!sourceAccount || sourceAccount.balance < newInvestment.amount) {
+            toast({ title: "Error", description: "Insufficient balance in the source account.", variant: "destructive" });
             return;
         }
-        setInvestments([...investments, newInvestment]);
+
+        let tempAccounts = accounts.map(acc => {
+            if (acc.name === newInvestment.sourceAccountName) {
+                return { ...acc, balance: acc.balance - newInvestment.amount };
+            }
+            return acc;
+        });
+
+        const investmentAccountIndex = tempAccounts.findIndex(
+            (acc) => acc.name === newInvestment.description && acc.type === 'Investment'
+        );
+
+        if (investmentAccountIndex > -1) {
+            tempAccounts[investmentAccountIndex] = {
+                ...tempAccounts[investmentAccountIndex],
+                balance: tempAccounts[investmentAccountIndex].balance + newInvestment.amount
+            };
+        } else {
+            tempAccounts.push({
+                name: newInvestment.description,
+                type: 'Investment',
+                balance: newInvestment.amount
+            });
+        }
+        
+        setAccounts(tempAccounts);
+
+        const investmentToAdd: InvestmentTransaction = { ...newInvestment, date: formatDate(new Date()) };
+        setInvestmentTransactions([...investmentTransactions, investmentToAdd]);
+
         setNewInvestment(emptyInvestment);
         setIsAddInvestmentOpen(false);
     };
@@ -334,7 +368,7 @@ export default function BudgetPage() {
                                     {accounts.map((acc, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{acc.name}</TableCell>
-                                            <TableCell><Badge variant="outline">{acc.type}</Badge></TableCell>
+                                            <TableCell><Badge variant={acc.type === 'Investment' ? 'default' : 'outline'}>{acc.type}</Badge></TableCell>
                                             <TableCell className={`text-right font-mono ${(acc.type === 'Credit' && acc.balance > 0) || (acc.type !== 'Credit' && acc.balance < 0) ? 'text-destructive' : ''}`}>
                                                 {acc.balance.toLocaleString()}
                                             </TableCell>
@@ -488,12 +522,12 @@ export default function BudgetPage() {
                         <div className="flex justify-end mb-4">
                             <Dialog open={isAddInvestmentOpen} onOpenChange={setIsAddInvestmentOpen}>
                                 <DialogTrigger asChild>
-                                    <Button onClick={() => setNewInvestment(emptyInvestment)}><Plus className="mr-2 h-4 w-4" /> Add Investment</Button>
+                                    <Button onClick={() => setNewInvestment(emptyInvestment)}><Plus className="mr-2 h-4 w-4" /> Log Investment</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>Add Recurring Investment</DialogTitle>
-                                        <DialogDescription>Set up a new recurring monthly investment or debit.</DialogDescription>
+                                        <DialogTitle>Log a New Investment</DialogTitle>
+                                        <DialogDescription>Record a new investment transaction.</DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -501,16 +535,12 @@ export default function BudgetPage() {
                                             <Input id="inv-desc" placeholder="e.g., Mutual Fund SIP" value={newInvestment.description} onChange={e => setNewInvestment({...newInvestment, description: e.target.value})} />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="inv-amount">Monthly Amount (INR)</Label>
+                                            <Label htmlFor="inv-amount">Amount (INR)</Label>
                                             <Input id="inv-amount" type="number" placeholder="e.g., 5000" value={newInvestment.amount || ''} onChange={e => setNewInvestment({...newInvestment, amount: Number(e.target.value)})} />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="inv-day">Day of Month</Label>
-                                            <Input id="inv-day" type="number" placeholder="e.g., 5" value={newInvestment.dayOfMonth || ''} onChange={e => setNewInvestment({...newInvestment, dayOfMonth: Number(e.target.value)})} min="1" max="31" />
-                                        </div>
-                                        <div className="space-y-2">
                                             <Label htmlFor="inv-account">Debit From Account</Label>
-                                            <Select value={newInvestment.accountName} onValueChange={value => setNewInvestment({...newInvestment, accountName: value})}>
+                                            <Select value={newInvestment.sourceAccountName} onValueChange={value => setNewInvestment({...newInvestment, sourceAccountName: value})}>
                                                 <SelectTrigger id="inv-account">
                                                     <SelectValue placeholder="Select an account" />
                                                 </SelectTrigger>
@@ -524,28 +554,32 @@ export default function BudgetPage() {
                                     </div>
                                     <DialogFooter>
                                         <Button variant="outline" onClick={() => setIsAddInvestmentOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddInvestment}>Add Investment</Button>
+                                        <Button onClick={handleAddInvestment}>Log Investment</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
                         </div>
                         <Card>
+                             <CardHeader>
+                                <CardTitle>Investment History</CardTitle>
+                                <CardDescription>A record of all your investment transactions.</CardDescription>
+                            </CardHeader>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Description</TableHead>
-                                        <TableHead>Debit Account</TableHead>
-                                        <TableHead>Day of Month</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Source Account</TableHead>
                                         <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {investments.map((inv, i) => (
+                                    {investmentTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inv, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{inv.description}</TableCell>
-                                            <TableCell><Badge variant="secondary">{inv.accountName}</Badge></TableCell>
-                                            <TableCell>{inv.dayOfMonth}</TableCell>
-                                            <TableCell className="text-right text-destructive font-mono">- {inv.amount.toLocaleString()}</TableCell>
+                                            <TableCell>{inv.date}</TableCell>
+                                            <TableCell><Badge variant="secondary">{inv.sourceAccountName}</Badge></TableCell>
+                                            <TableCell className="text-right font-mono">+ {inv.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -570,7 +604,7 @@ export default function BudgetPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Your Financial Snapshot</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Your net worth is the value of your assets (e.g. savings) minus your liabilities (e.g. credit card debt).
+                    Your net worth is the value of your assets (e.g. savings, investments) minus your liabilities (e.g. credit card debt).
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-4 py-4">
@@ -598,3 +632,5 @@ export default function BudgetPage() {
         </div>
     );
 }
+
+    
