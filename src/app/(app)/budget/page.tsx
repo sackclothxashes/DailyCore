@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart } from "lucide-react";
+import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart, Trash2 } from "lucide-react";
 import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine, Bar } from "recharts";
 import {
   ChartContainer,
@@ -24,6 +25,7 @@ import {
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -84,6 +86,7 @@ export default function BudgetPage() {
     const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
     const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
     const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false);
+    const [isDeleteBudgetOpen, setIsDeleteBudgetOpen] = useState(false);
     const [showNetWorthDialog, setShowNetWorthDialog] = useState(false);
 
     // Form states
@@ -92,6 +95,7 @@ export default function BudgetPage() {
     const [newIncome, setNewIncome] = useState<Omit<Income, 'date'>>(emptyIncome);
     const [newInvestment, setNewInvestment] = useState(emptyInvestment);
     const [newBudget, setNewBudget] = useState(emptyBudget);
+    const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
 
     // --- Corrected Financial Calculations ---
     const assetAccounts = useMemo(() => 
@@ -376,6 +380,18 @@ export default function BudgetPage() {
         setIsAddBudgetOpen(false);
     };
 
+    const handleDeleteBudgetClick = (budget: Budget) => {
+        setBudgetToDelete(budget);
+        setIsDeleteBudgetOpen(true);
+    };
+
+    const handleDeleteBudgetConfirm = () => {
+        if (!budgetToDelete) return;
+        setBudgets(budgets.filter(b => b.id !== budgetToDelete.id));
+        toast({ title: "Budget Deleted", description: "The budget has been removed successfully." });
+        setIsDeleteBudgetOpen(false);
+        setBudgetToDelete(null);
+    };
 
     return (
         <div className="space-y-8">
@@ -432,11 +448,16 @@ export default function BudgetPage() {
                                     budgetProgressData.map((budget, index) => (
                                         <React.Fragment key={budget.id}>
                                             <div>
-                                                <div className="flex justify-between mb-1 text-sm">
+                                                <div className="flex justify-between items-center mb-1 text-sm">
                                                     <span className="font-medium">{budget.name} ({budget.category})</span>
-                                                    <span className="text-muted-foreground">
-                                                        INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground">
+                                                            INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
+                                                        </span>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteBudgetClick(budget)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                                 <Progress value={budget.progress} className="h-2" />
                                                 <p className="text-right text-xs capitalize text-muted-foreground mt-1">
@@ -859,5 +880,23 @@ export default function BudgetPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <AlertDialog open={isDeleteBudgetOpen} onOpenChange={setIsDeleteBudgetOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the budget: <strong>{budgetToDelete?.name}</strong>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setBudgetToDelete(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteBudgetConfirm} className="bg-destructive hover:bg-destructive/90">
+                      Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
+}
