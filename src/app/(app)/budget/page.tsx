@@ -20,7 +20,6 @@ import {
   DialogDescription as DialogDescriptionComponent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -400,43 +399,7 @@ export default function BudgetPage() {
                 {currentView === 'accounts' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewAccount(emptyAccount)}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Account</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new account.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-name">Account Name</Label>
-                                            <Input id="acc-name" placeholder="e.g., Savings Account" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-type">Account Type</Label>
-                                            <Select value={newAccount.type} onValueChange={value => setNewAccount({...newAccount, type: value})}>
-                                                <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Savings">Savings</SelectItem>
-                                                    <SelectItem value="Checking">Checking</SelectItem>
-                                                    <SelectItem value="Credit">Credit Card</SelectItem>
-                                                    <SelectItem value="Investment">Investment</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
-                                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" value={newAccount.balance || ''} onChange={e => setNewAccount({...newAccount, balance: Number(e.target.value)})} />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddAccount}>Add Account</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button onClick={() => { setIsAddAccountOpen(true); setNewAccount(emptyAccount); }}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
                         </div>
                         <Card>
                             <Table>
@@ -465,48 +428,7 @@ export default function BudgetPage() {
                 {currentView === 'expenses' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="destructive" onClick={() => setNewExpense(emptyExpense)}><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Expense</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new expense.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-desc">Description</Label>
-                                            <Input id="exp-desc" placeholder="e.g., Coffee" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-cat">Category</Label>
-                                            <Input id="exp-cat" placeholder="e.g., Food" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-amount">Amount (INR)</Label>
-                                            <Input id="exp-amount" type="number" placeholder="e.g., 300" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-account">Account</Label>
-                                            <Select value={newExpense.accountName} onValueChange={value => setNewExpense({...newExpense, accountName: value})}>
-                                                <SelectTrigger id="exp-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {accounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
-                                        <Button variant="destructive" onClick={handleAddExpense}>Add Expense</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button variant="destructive" onClick={() => { setIsAddExpenseOpen(true); setNewExpense(emptyExpense); }}><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
                         </div>
                         <Card>
                             <Table>
@@ -537,44 +459,7 @@ export default function BudgetPage() {
                 {currentView === 'income' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddIncomeOpen} onOpenChange={setIsAddIncomeOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewIncome(emptyIncome)}><Plus className="mr-2 h-4 w-4" /> Add Income</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Income</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new income source.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-desc">Description</Label>
-                                            <Input id="inc-desc" placeholder="e.g., Monthly Salary" value={newIncome.description} onChange={e => setNewIncome({...newIncome, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-amount">Amount (INR)</Label>
-                                            <Input id="inc-amount" type="number" placeholder="e.g., 75000" value={newIncome.amount || ''} onChange={e => setNewIncome({...newIncome, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-account">Account</Label>
-                                            <Select value={newIncome.accountName} onValueChange={value => setNewIncome({...newIncome, accountName: value})}>
-                                                <SelectTrigger id="inc-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {accounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddIncomeOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddIncome}>Add Income</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button onClick={() => { setIsAddIncomeOpen(true); setNewIncome(emptyIncome); }}><Plus className="mr-2 h-4 w-4" /> Add Income</Button>
                         </div>
                         <Card>
                             <Table>
@@ -603,44 +488,7 @@ export default function BudgetPage() {
                  {currentView === 'investments' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddInvestmentOpen} onOpenChange={setIsAddInvestmentOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewInvestment(emptyInvestment)}><Plus className="mr-2 h-4 w-4" /> Log Investment</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Log a New Investment</DialogTitle>
-                                        <DialogDescriptionComponent>Record a new investment transaction.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-desc">Description</Label>
-                                            <Input id="inv-desc" placeholder="e.g., Mutual Fund SIP" value={newInvestment.description} onChange={e => setNewInvestment({...newInvestment, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-amount">Amount (INR)</Label>
-                                            <Input id="inv-amount" type="number" placeholder="e.g., 5000" value={newInvestment.amount || ''} onChange={e => setNewInvestment({...newInvestment, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-account">Debit From Account</Label>
-                                            <Select value={newInvestment.sourceAccountName} onValueChange={value => setNewInvestment({...newInvestment, sourceAccountName: value})}>
-                                                <SelectTrigger id="inv-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {assetAccounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddInvestmentOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddInvestment}>Log Investment</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                             <Button onClick={() => { setIsAddInvestmentOpen(true); setNewInvestment(emptyInvestment); }}><Plus className="mr-2 h-4 w-4" /> Log Investment</Button>
                         </div>
                         <Card>
                              <CardHeader>
@@ -706,7 +554,155 @@ export default function BudgetPage() {
                     <PiggyBank className="mr-2 h-4 w-4"/> Show Total Net Worth
                 </Button>
             </div>
-            
+
+            {/* --- Dialogs --- */}
+            <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Account</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new account.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-name">Account Name</Label>
+                            <Input id="acc-name" placeholder="e.g., Savings Account" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-type">Account Type</Label>
+                            <Select value={newAccount.type} onValueChange={value => setNewAccount({...newAccount, type: value})}>
+                                <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Savings">Savings</SelectItem>
+                                    <SelectItem value="Checking">Checking</SelectItem>
+                                    <SelectItem value="Credit">Credit Card</SelectItem>
+                                    <SelectItem value="Investment">Investment</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
+                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" value={newAccount.balance || ''} onChange={e => setNewAccount({...newAccount, balance: Number(e.target.value)})} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddAccount}>Add Account</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Expense</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new expense.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-desc">Description</Label>
+                            <Input id="exp-desc" placeholder="e.g., Coffee" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-cat">Category</Label>
+                            <Input id="exp-cat" placeholder="e.g., Food" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-amount">Amount (INR)</Label>
+                            <Input id="exp-amount" type="number" placeholder="e.g., 300" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-account">Account</Label>
+                            <Select value={newExpense.accountName} onValueChange={value => setNewExpense({...newExpense, accountName: value})}>
+                                <SelectTrigger id="exp-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleAddExpense}>Add Expense</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddIncomeOpen} onOpenChange={setIsAddIncomeOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Income</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new income source.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-desc">Description</Label>
+                            <Input id="inc-desc" placeholder="e.g., Monthly Salary" value={newIncome.description} onChange={e => setNewIncome({...newIncome, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-amount">Amount (INR)</Label>
+                            <Input id="inc-amount" type="number" placeholder="e.g., 75000" value={newIncome.amount || ''} onChange={e => setNewIncome({...newIncome, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-account">Account</Label>
+                            <Select value={newIncome.accountName} onValueChange={value => setNewIncome({...newIncome, accountName: value})}>
+                                <SelectTrigger id="inc-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddIncomeOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddIncome}>Add Income</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddInvestmentOpen} onOpenChange={setIsAddInvestmentOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Log a New Investment</DialogTitle>
+                        <DialogDescriptionComponent>Record a new investment transaction.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-desc">Description</Label>
+                            <Input id="inv-desc" placeholder="e.g., Mutual Fund SIP" value={newInvestment.description} onChange={e => setNewInvestment({...newInvestment, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-amount">Amount (INR)</Label>
+                            <Input id="inv-amount" type="number" placeholder="e.g., 5000" value={newInvestment.amount || ''} onChange={e => setNewInvestment({...newInvestment, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-account">Debit From Account</Label>
+                            <Select value={newInvestment.sourceAccountName} onValueChange={value => setNewInvestment({...newInvestment, sourceAccountName: value})}>
+                                <SelectTrigger id="inv-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {assetAccounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddInvestmentOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddInvestment}>Log Investment</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <AlertDialog open={showNetWorthDialog} onOpenChange={setShowNetWorthDialog}>
               <AlertDialogContent>
                 <AlertDialogHeader>

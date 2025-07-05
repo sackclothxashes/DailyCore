@@ -16,12 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { 
   format, 
-  addDays, 
   subMonths, 
   addMonths, 
   subWeeks, 
@@ -74,6 +75,9 @@ export default function DiaryPage() {
   const [selectedImage, setSelectedImage] = useState<Snapshot | null>(null);
   const [currentNotes, setCurrentNotes] = useState("");
 
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newSnapshotNotes, setNewSnapshotNotes] = useState("");
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
 
@@ -86,6 +90,20 @@ export default function DiaryPage() {
     if (!selectedImage) return;
     setImages(images.map(img => img.id === selectedImage.id ? { ...img, notes: currentNotes } : img));
     setSelectedImage(null);
+  };
+  
+  const handleAddSnapshot = () => {
+    const newSnapshot: Snapshot = {
+      id: Date.now(),
+      src: `https://placehold.co/600x400.png`,
+      alt: "A daily snapshot",
+      date: new Date(),
+      hint: "daily moment",
+      notes: newSnapshotNotes,
+    };
+    setImages(prevImages => [newSnapshot, ...prevImages].sort((a,b) => b.date.getTime() - a.date.getTime()));
+    setNewSnapshotNotes("");
+    setIsAddDialogOpen(false);
   };
 
   const handleCloseDialog = () => {
@@ -143,10 +161,40 @@ export default function DiaryPage() {
           title="Daily Snapshots"
           description="A picture a day. Create a visual journey of your life."
         >
-          <Button>
-            <PlusCircle className="mr-2" />
-            Add Snapshot
-          </Button>
+           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2" />
+                Add Snapshot
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add Today's Snapshot</DialogTitle>
+                    <DialogDescription>
+                        Capture your moment. A placeholder image will be used. Add your thoughts below.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="grid w-full gap-1.5">
+                        <Label htmlFor="new-notes">Today's Thoughts</Label>
+                        <Textarea
+                            id="new-notes"
+                            placeholder="What's on your mind today?"
+                            value={newSnapshotNotes}
+                            onChange={(e) => setNewSnapshotNotes(e.target.value)}
+                            rows={5}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleAddSnapshot}>Add Snapshot</Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </PageHeader>
         <Alert className="mb-8 bg-primary/20 border-primary/40">
           <ImageIcon className="h-4 w-4" />
