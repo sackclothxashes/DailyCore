@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart } from "lucide-react";
-import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine } from "recharts";
+import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart, Trash2 } from "lucide-react";
+import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine, Bar } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,12 +20,12 @@ import {
   DialogDescription as DialogDescriptionComponent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -40,8 +40,9 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { format } from 'date-fns';
+import { format, startOfMonth, startOfWeek, startOfYear, isAfter, isSameDay } from 'date-fns';
 import useLocalStorage from "@/hooks/use-local-storage";
+import { Progress } from "@/components/ui/progress";
 
 
 // --- Data Types ---
@@ -50,6 +51,13 @@ type Transaction = { description: string; amount: number; date: string };
 type Expense = Transaction & { category: string; accountName: string };
 type Income = Transaction & { accountName: string };
 type InvestmentTransaction = { description: string; amount: number; date: string; sourceAccountName: string; };
+type Budget = { 
+    id: string; 
+    name: string; 
+    limit: number; 
+    category: string;
+    resetFrequency: 'monthly' | 'weekly' | 'yearly' | 'none';
+};
 
 
 // --- Dynamic Initial Data ---
@@ -60,6 +68,7 @@ const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
 const emptyIncome: Omit<Income, 'date'> = { description: '', amount: 0, accountName: '' };
 const emptyInvestment: Omit<InvestmentTransaction, 'date'> = { description: '', amount: 0, sourceAccountName: '' };
+const emptyBudget: Omit<Budget, 'id'> = { name: '', limit: 0, category: '', resetFrequency: 'monthly' };
 
 
 export default function BudgetPage() {
@@ -68,6 +77,7 @@ export default function BudgetPage() {
     const [expenses, setExpenses] = useLocalStorage<Expense[]>("budget_expenses", []);
     const [incomes, setIncomes] = useLocalStorage<Income[]>("budget_incomes", []);
     const [investmentTransactions, setInvestmentTransactions] = useLocalStorage<InvestmentTransaction[]>("budget_investmentTransactions", []);
+    const [budgets, setBudgets] = useLocalStorage<Budget[]>("budget_budgets", []);
     const [currentView, setCurrentView] = useState('overview');
 
     // Dialog states
@@ -75,6 +85,8 @@ export default function BudgetPage() {
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
     const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
     const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
+    const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false);
+    const [isDeleteBudgetOpen, setIsDeleteBudgetOpen] = useState(false);
     const [showNetWorthDialog, setShowNetWorthDialog] = useState(false);
 
     // Form states
@@ -82,6 +94,8 @@ export default function BudgetPage() {
     const [newExpense, setNewExpense] = useState(emptyExpense);
     const [newIncome, setNewIncome] = useState<Omit<Income, 'date'>>(emptyIncome);
     const [newInvestment, setNewInvestment] = useState(emptyInvestment);
+    const [newBudget, setNewBudget] = useState(emptyBudget);
+    const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
 
     // --- Corrected Financial Calculations ---
     const assetAccounts = useMemo(() => 
@@ -211,7 +225,47 @@ export default function BudgetPage() {
           color: 'hsl(var(--destructive))',
         },
       } satisfies ChartConfig;
+    
+    const budgetProgressData = useMemo(() => {
+        const today = new Date();
+        return budgets.map(budget => {
+            let startDate: Date;
 
+            switch (budget.resetFrequency) {
+                case 'weekly':
+                    startDate = startOfWeek(today);
+                    break;
+                case 'yearly':
+                    startDate = startOfYear(today);
+                    break;
+                case 'monthly':
+                    startDate = startOfMonth(today);
+                    break;
+                case 'none':
+                    // A very old date to include all expenses
+                    startDate = new Date(0); 
+                    break;
+                default:
+                    startDate = startOfMonth(today);
+                    break;
+            }
+
+            const spent = expenses
+                .filter(exp => {
+                    if (exp.category.toLowerCase() !== budget.category.toLowerCase()) {
+                        return false;
+                    }
+                    const expenseDate = new Date(exp.date);
+                    if (isNaN(expenseDate.getTime())) return false; // Invalid date check
+                    
+                    return isAfter(expenseDate, startDate) || isSameDay(expenseDate, startDate);
+                })
+                .reduce((sum, exp) => sum + exp.amount, 0);
+                
+            const progress = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
+            return { ...budget, spent, progress };
+        });
+    }, [budgets, expenses]);
     
     const handleAddAccount = () => {
         if (!newAccount.name || !newAccount.type) {
@@ -314,7 +368,30 @@ export default function BudgetPage() {
         setNewInvestment(emptyInvestment);
         setIsAddInvestmentOpen(false);
     };
+    
+    const handleAddBudget = () => {
+        if (!newBudget.name || !newBudget.limit || !newBudget.category) {
+            toast({ title: "Error", description: "Please fill in all budget details.", variant: "destructive" });
+            return;
+        }
+        const budgetToAdd: Budget = { ...newBudget, id: `budget-${Date.now()}` };
+        setBudgets([...budgets, budgetToAdd]);
+        setNewBudget(emptyBudget);
+        setIsAddBudgetOpen(false);
+    };
 
+    const handleDeleteBudgetClick = (budget: Budget) => {
+        setBudgetToDelete(budget);
+        setIsDeleteBudgetOpen(true);
+    };
+
+    const handleDeleteBudgetConfirm = () => {
+        if (!budgetToDelete) return;
+        setBudgets(budgets.filter(b => b.id !== budgetToDelete.id));
+        toast({ title: "Budget Deleted", description: "The budget has been removed successfully." });
+        setIsDeleteBudgetOpen(false);
+        setBudgetToDelete(null);
+    };
 
     return (
         <div className="space-y-8">
@@ -355,19 +432,49 @@ export default function BudgetPage() {
             <div className="mt-6">
                 {currentView === 'overview' && (
                     <div className="space-y-6">
-                        <div className="rounded-lg bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <Landmark className="h-8 w-8 text-muted-foreground" />
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
-                                    <h3 className="font-semibold text-card-foreground text-lg">Budget Setup</h3>
-                                    <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
+                                    <CardTitle>Your Budgets</CardTitle>
+                                    <CardDescription>Track spending against your budget goals.</CardDescription>
                                 </div>
-                            </div>
-                            <Button className="w-full sm:w-auto" onClick={() => setIsAddAccountOpen(true)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Setup Budget
-                            </Button>
-                        </div>
+                                <Button onClick={() => { setIsAddBudgetOpen(true); setNewBudget(emptyBudget); }}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Budget
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {budgetProgressData.length > 0 ? (
+                                    budgetProgressData.map((budget, index) => (
+                                        <React.Fragment key={budget.id}>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1 text-sm">
+                                                    <span className="font-medium">{budget.name} ({budget.category})</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground">
+                                                            INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
+                                                        </span>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteBudgetClick(budget)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <Progress value={budget.progress} className="h-2" />
+                                                <p className="text-right text-xs capitalize text-muted-foreground mt-1">
+                                                    Resets {budget.resetFrequency}
+                                                </p>
+                                            </div>
+                                            {index < budgetProgressData.length - 1 && <Separator className="my-4" />}
+                                        </React.Fragment>
+                                    ))
+                                ) : (
+                                    <div className="text-center text-muted-foreground py-4">
+                                        <p>You haven't set any budgets yet.</p>
+                                        <p className="text-sm">Click "Add Budget" to get started.</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         {expenseChartData.length > 0 ? (
                             <Card>
@@ -400,43 +507,7 @@ export default function BudgetPage() {
                 {currentView === 'accounts' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewAccount(emptyAccount)}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Account</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new account.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-name">Account Name</Label>
-                                            <Input id="acc-name" placeholder="e.g., Savings Account" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-type">Account Type</Label>
-                                            <Select value={newAccount.type} onValueChange={value => setNewAccount({...newAccount, type: value})}>
-                                                <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Savings">Savings</SelectItem>
-                                                    <SelectItem value="Checking">Checking</SelectItem>
-                                                    <SelectItem value="Credit">Credit Card</SelectItem>
-                                                    <SelectItem value="Investment">Investment</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
-                                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" value={newAccount.balance || ''} onChange={e => setNewAccount({...newAccount, balance: Number(e.target.value)})} />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddAccount}>Add Account</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button onClick={() => { setIsAddAccountOpen(true); setNewAccount(emptyAccount); }}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
                         </div>
                         <Card>
                             <Table>
@@ -465,48 +536,7 @@ export default function BudgetPage() {
                 {currentView === 'expenses' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="destructive" onClick={() => setNewExpense(emptyExpense)}><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Expense</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new expense.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-desc">Description</Label>
-                                            <Input id="exp-desc" placeholder="e.g., Coffee" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-cat">Category</Label>
-                                            <Input id="exp-cat" placeholder="e.g., Food" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-amount">Amount (INR)</Label>
-                                            <Input id="exp-amount" type="number" placeholder="e.g., 300" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="exp-account">Account</Label>
-                                            <Select value={newExpense.accountName} onValueChange={value => setNewExpense({...newExpense, accountName: value})}>
-                                                <SelectTrigger id="exp-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {accounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
-                                        <Button variant="destructive" onClick={handleAddExpense}>Add Expense</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button variant="destructive" onClick={() => { setIsAddExpenseOpen(true); setNewExpense(emptyExpense); }}><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
                         </div>
                         <Card>
                             <Table>
@@ -537,44 +567,7 @@ export default function BudgetPage() {
                 {currentView === 'income' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddIncomeOpen} onOpenChange={setIsAddIncomeOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewIncome(emptyIncome)}><Plus className="mr-2 h-4 w-4" /> Add Income</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Income</DialogTitle>
-                                        <DialogDescriptionComponent>Enter the details of your new income source.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-desc">Description</Label>
-                                            <Input id="inc-desc" placeholder="e.g., Monthly Salary" value={newIncome.description} onChange={e => setNewIncome({...newIncome, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-amount">Amount (INR)</Label>
-                                            <Input id="inc-amount" type="number" placeholder="e.g., 75000" value={newIncome.amount || ''} onChange={e => setNewIncome({...newIncome, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inc-account">Account</Label>
-                                            <Select value={newIncome.accountName} onValueChange={value => setNewIncome({...newIncome, accountName: value})}>
-                                                <SelectTrigger id="inc-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {accounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddIncomeOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddIncome}>Add Income</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button onClick={() => { setIsAddIncomeOpen(true); setNewIncome(emptyIncome); }}><Plus className="mr-2 h-4 w-4" /> Add Income</Button>
                         </div>
                         <Card>
                             <Table>
@@ -603,44 +596,7 @@ export default function BudgetPage() {
                  {currentView === 'investments' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isAddInvestmentOpen} onOpenChange={setIsAddInvestmentOpen}>
-                                <DialogTrigger asChild>
-                                    <Button onClick={() => setNewInvestment(emptyInvestment)}><Plus className="mr-2 h-4 w-4" /> Log Investment</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Log a New Investment</DialogTitle>
-                                        <DialogDescriptionComponent>Record a new investment transaction.</DialogDescriptionComponent>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-desc">Description</Label>
-                                            <Input id="inv-desc" placeholder="e.g., Mutual Fund SIP" value={newInvestment.description} onChange={e => setNewInvestment({...newInvestment, description: e.target.value})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-amount">Amount (INR)</Label>
-                                            <Input id="inv-amount" type="number" placeholder="e.g., 5000" value={newInvestment.amount || ''} onChange={e => setNewInvestment({...newInvestment, amount: Number(e.target.value)})} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="inv-account">Debit From Account</Label>
-                                            <Select value={newInvestment.sourceAccountName} onValueChange={value => setNewInvestment({...newInvestment, sourceAccountName: value})}>
-                                                <SelectTrigger id="inv-account">
-                                                    <SelectValue placeholder="Select an account" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {assetAccounts.map(acc => (
-                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddInvestmentOpen(false)}>Cancel</Button>
-                                        <Button onClick={handleAddInvestment}>Log Investment</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                             <Button onClick={() => { setIsAddInvestmentOpen(true); setNewInvestment(emptyInvestment); }}><Plus className="mr-2 h-4 w-4" /> Log Investment</Button>
                         </div>
                         <Card>
                              <CardHeader>
@@ -680,15 +636,15 @@ export default function BudgetPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <ChartContainer config={analyticsChartConfig} className="h-[350px] w-full">
-                                        <LineChart data={analyticsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                        <RechartsLineChart data={analyticsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                                             <YAxis tickFormatter={(value) => `₹${value / 1000}k`} />
                                             <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                                            <Legend />
+                                            <ChartLegend />
                                             <RechartsLine type="monotone" dataKey="Income" stroke="var(--color-primary)" strokeWidth={2} activeDot={{ r: 8 }} />
                                             <RechartsLine type="monotone" dataKey="Expenses" stroke="var(--color-destructive)" strokeWidth={2} activeDot={{ r: 8 }} />
-                                        </LineChart>
+                                        </RechartsLineChart>
                                     </ChartContainer>
                                 </CardContent>
                             </Card>
@@ -706,7 +662,194 @@ export default function BudgetPage() {
                     <PiggyBank className="mr-2 h-4 w-4"/> Show Total Net Worth
                 </Button>
             </div>
-            
+
+            {/* --- Dialogs --- */}
+            <Dialog open={isAddBudgetOpen} onOpenChange={setIsAddBudgetOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Budget</DialogTitle>
+                        <DialogDescriptionComponent>Set a budget for a specific spending category.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-name">Budget Name</Label>
+                            <Input id="budget-name" placeholder="e.g., Monthly Groceries" value={newBudget.name} onChange={e => setNewBudget({...newBudget, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-limit">Amount (INR)</Label>
+                            <Input id="budget-limit" type="number" placeholder="e.g., 10000" value={newBudget.limit || ''} onChange={e => setNewBudget({...newBudget, limit: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-category">Category (Tag)</Label>
+                            <Input id="budget-category" placeholder="e.g., Groceries" value={newBudget.category} onChange={e => setNewBudget({...newBudget, category: e.target.value})} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="budget-reset">Reset Frequency</Label>
+                            <Select value={newBudget.resetFrequency} onValueChange={(value: 'monthly' | 'weekly' | 'yearly' | 'none') => setNewBudget({...newBudget, resetFrequency: value })}>
+                                <SelectTrigger id="budget-reset"><SelectValue placeholder="Select reset frequency" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                    <SelectItem value="none">Never</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddBudgetOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddBudget}>Add Budget</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Account</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new account.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-name">Account Name</Label>
+                            <Input id="acc-name" placeholder="e.g., Savings Account" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-type">Account Type</Label>
+                            <Select value={newAccount.type} onValueChange={value => setNewAccount({...newAccount, type: value})}>
+                                <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Savings">Savings</SelectItem>
+                                    <SelectItem value="Checking">Checking</SelectItem>
+                                    <SelectItem value="Credit">Credit Card</SelectItem>
+                                    <SelectItem value="Investment">Investment</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
+                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" value={newAccount.balance || ''} onChange={e => setNewAccount({...newAccount, balance: Number(e.target.value)})} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddAccount}>Add Account</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Expense</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new expense.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-desc">Description</Label>
+                            <Input id="exp-desc" placeholder="e.g., Coffee" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-cat">Category</Label>
+                            <Input id="exp-cat" placeholder="e.g., Food" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-amount">Amount (INR)</Label>
+                            <Input id="exp-amount" type="number" placeholder="e.g., 300" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="exp-account">Account</Label>
+                            <Select value={newExpense.accountName} onValueChange={value => setNewExpense({...newExpense, accountName: value})}>
+                                <SelectTrigger id="exp-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleAddExpense}>Add Expense</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddIncomeOpen} onOpenChange={setIsAddIncomeOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Income</DialogTitle>
+                        <DialogDescriptionComponent>Enter the details of your new income source.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-desc">Description</Label>
+                            <Input id="inc-desc" placeholder="e.g., Monthly Salary" value={newIncome.description} onChange={e => setNewIncome({...newIncome, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-amount">Amount (INR)</Label>
+                            <Input id="inc-amount" type="number" placeholder="e.g., 75000" value={newIncome.amount || ''} onChange={e => setNewIncome({...newIncome, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inc-account">Account</Label>
+                            <Select value={newIncome.accountName} onValueChange={value => setNewIncome({...newIncome, accountName: value})}>
+                                <SelectTrigger id="inc-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddIncomeOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddIncome}>Add Income</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddInvestmentOpen} onOpenChange={setIsAddInvestmentOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Log a New Investment</DialogTitle>
+                        <DialogDescriptionComponent>Record a new investment transaction.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-desc">Description</Label>
+                            <Input id="inv-desc" placeholder="e.g., Mutual Fund SIP" value={newInvestment.description} onChange={e => setNewInvestment({...newInvestment, description: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-amount">Amount (INR)</Label>
+                            <Input id="inv-amount" type="number" placeholder="e.g., 5000" value={newInvestment.amount || ''} onChange={e => setNewInvestment({...newInvestment, amount: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="inv-account">Debit From Account</Label>
+                            <Select value={newInvestment.sourceAccountName} onValueChange={value => setNewInvestment({...newInvestment, sourceAccountName: value})}>
+                                <SelectTrigger id="inv-account">
+                                    <SelectValue placeholder="Select an account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {assetAccounts.map(acc => (
+                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddInvestmentOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddInvestment}>Log Investment</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <AlertDialog open={showNetWorthDialog} onOpenChange={setShowNetWorthDialog}>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -734,6 +877,23 @@ export default function BudgetPage() {
                 </div>
                 <AlertDialogFooter>
                   <AlertDialogAction onClick={() => setShowNetWorthDialog(false)}>Close</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteBudgetOpen} onOpenChange={setIsDeleteBudgetOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the budget: <strong>{budgetToDelete?.name}</strong>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setBudgetToDelete(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteBudgetConfirm} className="bg-destructive hover:bg-destructive/90">
+                      Delete
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
