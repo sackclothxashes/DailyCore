@@ -3,12 +3,21 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase } from "lucide-react";
+import { PieChart, Pie, Cell } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
+  DialogDescription as DialogDescriptionComponent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -151,6 +160,39 @@ export default function BudgetPage() {
       { title: "Monthly Expenses", value: `INR ${monthlyExpenses.toLocaleString()}`, description: "This month's spending", Icon: CreditCard },
       { title: "Total Investments", value: `INR ${totalInvestments.toLocaleString()}`, description: "Value of all investments", Icon: Briefcase },
     ];
+
+    const expensesByCategory = useMemo(() => {
+        return monthlyExpenses > 0 ? expenses.reduce((acc, expense) => {
+            const category = expense.category || 'Uncategorized';
+            if (!acc[category]) {
+                acc[category] = 0;
+            }
+            acc[category] += expense.amount;
+            return acc;
+        }, {} as Record<string, number>) : {};
+    }, [expenses, monthlyExpenses]);
+
+    const expenseChartData = useMemo(() => {
+        const data = Object.entries(expensesByCategory).map(([name, value], index) => ({
+             name, 
+             value, 
+             fill: `var(--chart-${(index % 5) + 1})` 
+        }));
+        return data;
+    }, [expensesByCategory]);
+
+    const chartConfig = useMemo(() => {
+        if (expenseChartData.length === 0) return {};
+        const config: ChartConfig = {};
+        expenseChartData.forEach(item => {
+            config[item.name] = {
+                label: item.name,
+                color: item.fill,
+            };
+        });
+        return { ...config, value: { label: 'Amount' } };
+    }, [expenseChartData]);
+
     
     const handleAddAccount = () => {
         if (!newAccount.name || !newAccount.type) {
@@ -302,16 +344,38 @@ export default function BudgetPage() {
                                     <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
                                 </div>
                             </div>
-                            <Button className="w-full sm:w-auto">
+                            <Button className="w-full sm:w-auto" onClick={() => setIsAddAccountOpen(true)}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Setup Budget
                             </Button>
                         </div>
 
-                        <div className="flex flex-col items-center justify-center gap-2 text-center py-20">
-                            <LineChart className="w-20 h-20 text-muted-foreground/50" />
-                            <p className="text-muted-foreground mt-4">Your financial overview will appear here.</p>
-                        </div>
+                        {expenseChartData.length > 0 ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Expense Breakdown</CardTitle>
+                                    <CardDescription>A look at your spending by category.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex items-center justify-center">
+                                    <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[300px]">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie data={expenseChartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
+                                                {expenseChartData.map((entry) => (
+                                                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                                        </PieChart>
+                                    </ChartContainer>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center gap-2 text-center py-20 rounded-lg bg-card">
+                                <LineChart className="w-20 h-20 text-muted-foreground/50" />
+                                <p className="text-muted-foreground mt-4">Your financial overview will appear here once you add some expenses.</p>
+                            </div>
+                        )}
                     </div>
                 )}
                 {currentView === 'accounts' && (
@@ -324,7 +388,7 @@ export default function BudgetPage() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add New Account</DialogTitle>
-                                        <DialogDescription>Enter the details of your new account.</DialogDescription>
+                                        <DialogDescriptionComponent>Enter the details of your new account.</DialogDescriptionComponent>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -389,7 +453,7 @@ export default function BudgetPage() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add New Expense</DialogTitle>
-                                        <DialogDescription>Enter the details of your new expense.</DialogDescription>
+                                        <DialogDescriptionComponent>Enter the details of your new expense.</DialogDescriptionComponent>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -461,7 +525,7 @@ export default function BudgetPage() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add New Income</DialogTitle>
-                                        <DialogDescription>Enter the details of your new income source.</DialogDescription>
+                                        <DialogDescriptionComponent>Enter the details of your new income source.</DialogDescriptionComponent>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -527,7 +591,7 @@ export default function BudgetPage() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Log a New Investment</DialogTitle>
-                                        <DialogDescription>Record a new investment transaction.</DialogDescription>
+                                        <DialogDescriptionComponent>Record a new investment transaction.</DialogDescriptionComponent>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -632,5 +696,3 @@ export default function BudgetPage() {
         </div>
     );
 }
-
-    
