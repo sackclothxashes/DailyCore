@@ -276,60 +276,60 @@ export default function DiaryPage() {
           </Dialog>
         </PageHeader>
         
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full sm:w-auto">
-            <TabsList>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <TabsList className="w-full sm:w-auto">
               <TabsTrigger value="visible">Snapshots</TabsTrigger>
               <TabsTrigger value="hidden">Hidden</TabsTrigger>
             </TabsList>
-          </Tabs>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
-            <Button variant="outline" size="icon" onClick={handlePrevious} aria-label="Previous month" disabled={activeTab === 'hidden'}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="font-semibold text-center w-40 tabular-nums">
-              {activeTab === 'visible' ? currentDisplayDate : 'Hidden Archive'}
-            </span>
-            <Button variant="outline" size="icon" onClick={handleNext} aria-label="Next month" disabled={activeTab === 'hidden'}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
+              <Button variant="outline" size="icon" onClick={handlePrevious} aria-label="Previous month" disabled={activeTab === 'hidden'}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold text-center w-40 tabular-nums">
+                {activeTab === 'visible' ? currentDisplayDate : 'Hidden Archive'}
+              </span>
+              <Button variant="outline" size="icon" onClick={handleNext} aria-label="Next month" disabled={activeTab === 'hidden'}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <TabsContent value="visible" className="mt-4">
-          {visibleSnapshots.length > 0 ? (
-            <PhotoGrid items={visibleSnapshots} onImageSelect={handleImageSelect} />
-          ) : (
-            <Card className="flex items-center justify-center h-64">
-              <div className="text-center text-muted-foreground">
-                <p>No snapshots for this period.</p>
-                <p className="text-sm">Try navigating to a different date or add one!</p>
-              </div>
-            </Card>
-          )}
-        </TabsContent>
-        <TabsContent value="hidden" className="mt-4">
-          {isUnlocked ? (
-            hiddenSnapshots.length > 0 ? (
-              <PhotoGrid items={hiddenSnapshots} onImageSelect={handleImageSelect} />
+          <TabsContent value="visible" className="mt-4">
+            {visibleSnapshots.length > 0 ? (
+              <PhotoGrid items={visibleSnapshots} onImageSelect={handleImageSelect} />
             ) : (
               <Card className="flex items-center justify-center h-64">
                 <div className="text-center text-muted-foreground">
-                  <p>No hidden snapshots.</p>
+                  <p>No snapshots for this period.</p>
+                  <p className="text-sm">Try navigating to a different date or add one!</p>
                 </div>
               </Card>
-            )
-          ) : (
-            <Card className="flex flex-col items-center justify-center h-64">
-              <Lock className="w-12 h-12 text-muted-foreground mb-4" />
-              <div className="text-center text-muted-foreground">
-                <p className="font-semibold">This area is password protected.</p>
-                <p className="text-sm">Click the "Hidden" tab again to enter the password.</p>
-              </div>
-            </Card>
-          )}
-        </TabsContent>
+            )}
+          </TabsContent>
+          <TabsContent value="hidden" className="mt-4">
+            {isUnlocked ? (
+              hiddenSnapshots.length > 0 ? (
+                <PhotoGrid items={hiddenSnapshots} onImageSelect={handleImageSelect} />
+              ) : (
+                <Card className="flex items-center justify-center h-64">
+                  <div className="text-center text-muted-foreground">
+                    <p>No hidden snapshots.</p>
+                  </div>
+                </Card>
+              )
+            ) : (
+              <Card className="flex flex-col items-center justify-center h-64">
+                <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+                <div className="text-center text-muted-foreground">
+                  <p className="font-semibold">This area is password protected.</p>
+                  <p className="text-sm">Click the "Hidden" tab again to enter the password.</p>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
 
       </div>
 
