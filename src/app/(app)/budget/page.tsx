@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart } from "lucide-react";
-import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine } from "recharts";
+import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine, Bar } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -616,15 +615,15 @@ export default function BudgetPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <ChartContainer config={analyticsChartConfig} className="h-[350px] w-full">
-                                        <LineChart data={analyticsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                        <RechartsLineChart data={analyticsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                                             <YAxis tickFormatter={(value) => `₹${value / 1000}k`} />
                                             <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                                            <Legend />
+                                            <ChartLegend />
                                             <RechartsLine type="monotone" dataKey="Income" stroke="var(--color-primary)" strokeWidth={2} activeDot={{ r: 8 }} />
                                             <RechartsLine type="monotone" dataKey="Expenses" stroke="var(--color-destructive)" strokeWidth={2} activeDot={{ r: 8 }} />
-                                        </LineChart>
+                                        </RechartsLineChart>
                                     </ChartContainer>
                                 </CardContent>
                             </Card>
@@ -862,4 +861,3 @@ export default function BudgetPage() {
             </AlertDialog>
         </div>
     );
-}
