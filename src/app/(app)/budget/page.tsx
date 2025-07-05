@@ -4,8 +4,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase } from "lucide-react";
-import { PieChart, Pie, Cell } from "recharts";
+import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart } from "lucide-react";
+import { PieChart, Pie, Cell, Legend, CartesianGrid, XAxis, YAxis, Line as RechartsLine } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -40,6 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { format } from 'date-fns';
+
 
 // --- Data Types ---
 type Account = { name: string; type: string; balance: number };
@@ -57,19 +59,19 @@ const yesterday = new Date();
 yesterday.setDate(today.getDate() - 1);
 const investmentDate = new Date(today.getFullYear(), today.getMonth(), 5);
 
-const formatDate = (date: Date) => date.toISOString().split('T')[0];
+const formatDateString = (date: Date) => date.toISOString().split('T')[0];
 
 const initialIncomes: Income[] = [
-    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth), accountName: "Main Bank" },
+    { description: "Monthly Salary", amount: 75000, date: formatDateString(firstDayOfMonth), accountName: "Main Bank" },
 ];
 
 const initialExpenses: Expense[] = [
-    { description: "Groceries", category: "Food", amount: 3000, date: formatDate(yesterday), accountName: "Main Bank" },
-    { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDate(middleOfMonth), accountName: "Main Bank" },
+    { description: "Groceries", category: "Food", amount: 3000, date: formatDateString(yesterday), accountName: "Main Bank" },
+    { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDateString(middleOfMonth), accountName: "Main Bank" },
 ];
 
 const initialInvestmentTransactions: InvestmentTransaction[] = [
-    { description: "Mutual Fund SIP", amount: 5000, date: formatDate(investmentDate), sourceAccountName: "Main Bank" },
+    { description: "Mutual Fund SIP", amount: 5000, date: formatDateString(investmentDate), sourceAccountName: "Main Bank" },
 ];
 
 // Consistent initial balances
@@ -193,6 +195,49 @@ export default function BudgetPage() {
         return { ...config, value: { label: 'Amount' } };
     }, [expenseChartData]);
 
+    const analyticsData = useMemo(() => {
+        const combinedTransactions = [
+          ...incomes.map(i => ({ ...i, type: 'income' })),
+          ...expenses.map(e => ({ ...e, type: 'expense' }))
+        ];
+    
+        if (combinedTransactions.length === 0) return [];
+    
+        const monthlyData: Record<string, { income: number, expenses: number }> = {};
+    
+        combinedTransactions.forEach(t => {
+          const date = new Date(t.date);
+          const monthYear = format(date, 'yyyy-MM');
+          if (!monthlyData[monthYear]) {
+            monthlyData[monthYear] = { income: 0, expenses: 0 };
+          }
+          if (t.type === 'income') {
+            monthlyData[monthYear].income += t.amount;
+          } else {
+            monthlyData[monthYear].expenses += t.amount;
+          }
+        });
+        
+        const sortedMonths = Object.keys(monthlyData).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    
+        return sortedMonths.map(monthYear => ({
+          name: format(new Date(`${monthYear}-02`), 'MMM yy'),
+          Income: monthlyData[monthYear].income,
+          Expenses: monthlyData[monthYear].expenses,
+        }));
+    }, [incomes, expenses]);
+
+    const analyticsChartConfig = {
+        Income: {
+          label: 'Income',
+          color: 'hsl(var(--primary))',
+        },
+        Expenses: {
+          label: 'Expenses',
+          color: 'hsl(var(--destructive))',
+        },
+      } satisfies ChartConfig;
+
     
     const handleAddAccount = () => {
         if (!newAccount.name || !newAccount.type) {
@@ -209,7 +254,7 @@ export default function BudgetPage() {
             toast({ title: "Error", description: "Please fill in all expense details.", variant: "destructive" });
             return;
         }
-        const expenseToAdd: Expense = { ...newExpense, date: formatDate(new Date()) };
+        const expenseToAdd: Expense = { ...newExpense, date: formatDateString(new Date()) };
         setExpenses([...expenses, expenseToAdd]);
 
         const updatedAccounts = accounts.map(acc => {
@@ -233,7 +278,7 @@ export default function BudgetPage() {
             toast({ title: "Error", description: "Please fill in all income details.", variant: "destructive" });
             return;
         }
-        const incomeToAdd: Income = { ...newIncome, date: formatDate(new Date()) };
+        const incomeToAdd: Income = { ...newIncome, date: formatDateString(new Date()) };
         setIncomes([...incomes, incomeToAdd]);
 
         const updatedAccounts = accounts.map(acc => {
@@ -289,7 +334,7 @@ export default function BudgetPage() {
         
         setAccounts(tempAccounts);
 
-        const investmentToAdd: InvestmentTransaction = { ...newInvestment, date: formatDate(new Date()) };
+        const investmentToAdd: InvestmentTransaction = { ...newInvestment, date: formatDateString(new Date()) };
         setInvestmentTransactions([...investmentTransactions, investmentToAdd]);
 
         setNewInvestment(emptyInvestment);
@@ -652,8 +697,33 @@ export default function BudgetPage() {
                     </div>
                 )}
                 {currentView === 'analytics' && (
-                    <div className="flex flex-col items-center justify-center gap-2 text-center py-20">
-                        <p className="text-muted-foreground">Analytics are not yet available.</p>
+                    <div>
+                        {analyticsData.length > 0 ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Income vs. Expenses</CardTitle>
+                                    <CardDescription>A monthly comparison of your cash flow.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartContainer config={analyticsChartConfig} className="h-[350px] w-full">
+                                        <LineChart data={analyticsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                                            <YAxis tickFormatter={(value) => `₹${value / 1000}k`} />
+                                            <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                                            <Legend />
+                                            <RechartsLine type="monotone" dataKey="Income" stroke="var(--color-primary)" strokeWidth={2} activeDot={{ r: 8 }} />
+                                            <RechartsLine type="monotone" dataKey="Expenses" stroke="var(--color-destructive)" strokeWidth={2} activeDot={{ r: 8 }} />
+                                        </LineChart>
+                                    </ChartContainer>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center gap-2 text-center py-20 rounded-lg bg-card">
+                                <BarChart className="w-20 h-20 text-muted-foreground/50" />
+                                <p className="text-muted-foreground mt-4">Your financial analytics will appear here once you have some income and expense data.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -696,3 +766,5 @@ export default function BudgetPage() {
         </div>
     );
 }
+
+    
