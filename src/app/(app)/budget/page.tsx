@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -29,6 +28,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
+import { useToast } from "@/hooks/use-toast";
+
+// --- Data Types ---
+type Account = { name: string; type: string; balance: number };
+type Transaction = { description: string; amount: number; date: string };
+type Expense = Transaction & { category: string; accountName: string };
 
 // --- Dynamic Initial Data ---
 const today = new Date();
@@ -39,30 +44,47 @@ yesterday.setDate(today.getDate() - 1);
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-const initialAccounts = [
-    { name: "Main Bank", type: "Savings", balance: "50000" },
-    { name: "Credit Card", type: "Credit", balance: "-15000" },
+const initialAccounts: Account[] = [
+    { name: "Main Bank", type: "Savings", balance: 50000 },
+    { name: "Credit Card", type: "Credit", balance: -15000 },
 ];
 
-const initialExpenses = [
-    { description: "Groceries", category: "Food", amount: "3000", date: formatDate(yesterday) },
-    { description: "Electricity Bill", category: "Utilities", amount: "1500", date: formatDate(middleOfMonth) },
+// For demonstration, assume initial expenses came from the Main Bank
+const initialExpenses: Expense[] = [
+    { description: "Groceries", category: "Food", amount: 3000, date: formatDate(yesterday), accountName: "Main Bank" },
+    { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDate(middleOfMonth), accountName: "Main Bank" },
 ];
 
-const initialDeposits = [
-    { description: "Monthly Salary", amount: "75000", date: formatDate(firstDayOfMonth) },
+const initialDeposits: Transaction[] = [
+    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth) },
 ];
+
+// --- Empty States for Forms ---
+const emptyAccount: Account = { name: '', type: '', balance: 0 };
+const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
+const emptyDeposit: Omit<Transaction, 'date'> = { description: '', amount: 0 };
 
 
 export default function BudgetPage() {
-    const [accounts, setAccounts] = useState(initialAccounts);
-    const [expenses, setExpenses] = useState(initialExpenses);
-    const [deposits, setDeposits] = useState(initialDeposits);
+    const { toast } = useToast();
+    const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const [deposits, setDeposits] = useState<Transaction[]>(initialDeposits);
     const [currentView, setCurrentView] = useState('overview');
+
+    // Dialog states
+    const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+    const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+    const [isAddDepositOpen, setIsAddDepositOpen] = useState(false);
     const [showNetWorthDialog, setShowNetWorthDialog] = useState(false);
 
+    // Form states
+    const [newAccount, setNewAccount] = useState<Account>(emptyAccount);
+    const [newExpense, setNewExpense] = useState(emptyExpense);
+    const [newDeposit, setNewDeposit] = useState(emptyDeposit);
+
     const totalBalance = useMemo(() => 
-        accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
+        accounts.reduce((sum, acc) => sum + acc.balance, 0),
         [accounts]
     );
 
@@ -75,21 +97,62 @@ export default function BudgetPage() {
             const expenseDate = new Date(expense.date);
             return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
           })
-          .reduce((sum, exp) => sum + Number(exp.amount), 0);
+          .reduce((sum, exp) => sum + exp.amount, 0);
     }, [expenses]);
     
     const totalDeposits = useMemo(() =>
-        deposits.reduce((sum, dep) => sum + Number(dep.amount), 0),
+        deposits.reduce((sum, dep) => sum + dep.amount, 0),
         [deposits]
     );
 
-    const netWorth = useMemo(() => totalBalance + totalDeposits, [totalBalance, totalDeposits]);
+    const netWorth = useMemo(() => totalBalance, [totalBalance]);
 
     const summaryData = [
       { title: "Total Available balance", value: `INR ${totalBalance.toLocaleString()}`, description: `Across ${accounts.length} accounts`, Icon: LineChart },
       { title: "Total Deposits", value: `INR ${totalDeposits.toLocaleString()}`, description: "Total income received", Icon: DollarSign },
       { title: "Monthly Expenses", value: `INR ${monthlyExpenses.toLocaleString()}`, description: "This month's spending", Icon: CreditCard },
     ];
+    
+    const handleAddAccount = () => {
+        if (!newAccount.name || !newAccount.type) {
+            toast({ title: "Error", description: "Please fill in all account details.", variant: "destructive" });
+            return;
+        }
+        setAccounts([...accounts, newAccount]);
+        setNewAccount(emptyAccount);
+        setIsAddAccountOpen(false);
+    };
+
+    const handleAddExpense = () => {
+        if (!newExpense.description || !newExpense.amount || !newExpense.accountName || !newExpense.category) {
+            toast({ title: "Error", description: "Please fill in all expense details.", variant: "destructive" });
+            return;
+        }
+        const expenseToAdd: Expense = { ...newExpense, date: formatDate(new Date()) };
+        setExpenses([...expenses, expenseToAdd]);
+
+        const updatedAccounts = accounts.map(acc => 
+            acc.name === newExpense.accountName 
+            ? { ...acc, balance: acc.balance - newExpense.amount }
+            : acc
+        );
+        setAccounts(updatedAccounts);
+        
+        setNewExpense(emptyExpense);
+        setIsAddExpenseOpen(false);
+    };
+    
+    const handleAddDeposit = () => {
+        if (!newDeposit.description || !newDeposit.amount) {
+            toast({ title: "Error", description: "Please fill in all deposit details.", variant: "destructive" });
+            return;
+        }
+        const depositToAdd = { ...newDeposit, date: formatDate(new Date()) };
+        setDeposits([...deposits, depositToAdd]);
+        setNewDeposit(emptyDeposit);
+        setIsAddDepositOpen(false);
+    };
+
 
     return (
         <div className="space-y-8">
@@ -152,9 +215,9 @@ export default function BudgetPage() {
                 {currentView === 'accounts' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog>
+                            <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
                                 <DialogTrigger asChild>
-                                    <Button><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
+                                    <Button onClick={() => setNewAccount(emptyAccount)}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -164,30 +227,28 @@ export default function BudgetPage() {
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="acc-name">Account Name</Label>
-                                            <Input id="acc-name" placeholder="e.g., Savings Account" />
+                                            <Input id="acc-name" placeholder="e.g., Savings Account" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="acc-type">Account Type</Label>
-                                            <Select>
+                                            <Select value={newAccount.type} onValueChange={value => setNewAccount({...newAccount, type: value})}>
                                                 <SelectTrigger><SelectValue placeholder="Select account type" /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="savings">Savings</SelectItem>
-                                                    <SelectItem value="checking">Checking</SelectItem>
-                                                    <SelectItem value="credit">Credit Card</SelectItem>
-                                                    <SelectItem value="investment">Investment</SelectItem>
+                                                    <SelectItem value="Savings">Savings</SelectItem>
+                                                    <SelectItem value="Checking">Checking</SelectItem>
+                                                    <SelectItem value="Credit">Credit Card</SelectItem>
+                                                    <SelectItem value="Investment">Investment</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="acc-balance">Initial Balance (INR)</Label>
-                                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" />
+                                            <Input id="acc-balance" type="number" placeholder="e.g., 50000" value={newAccount.balance || ''} onChange={e => setNewAccount({...newAccount, balance: Number(e.target.value)})} />
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Cancel</Button>
-                                        </DialogClose>
-                                        <Button>Add Account</Button>
+                                        <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleAddAccount}>Add Account</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -206,7 +267,7 @@ export default function BudgetPage() {
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{acc.name}</TableCell>
                                             <TableCell><Badge variant="outline">{acc.type}</Badge></TableCell>
-                                            <TableCell className="text-right">{Number(acc.balance).toLocaleString()}</TableCell>
+                                            <TableCell className={`text-right ${acc.balance < 0 ? 'text-destructive' : ''}`}>{acc.balance.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -217,9 +278,9 @@ export default function BudgetPage() {
                 {currentView === 'expenses' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog>
+                            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
                                 <DialogTrigger asChild>
-                                    <Button variant="destructive"><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
+                                    <Button variant="destructive" onClick={() => setNewExpense(emptyExpense)}><Plus className="mr-2 h-4 w-4" /> Add Expense</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -229,22 +290,33 @@ export default function BudgetPage() {
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="exp-desc">Description</Label>
-                                            <Input id="exp-desc" placeholder="e.g., Coffee" />
+                                            <Input id="exp-desc" placeholder="e.g., Coffee" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="exp-cat">Category</Label>
-                                            <Input id="exp-cat" placeholder="e.g., Food" />
+                                            <Input id="exp-cat" placeholder="e.g., Food" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="exp-amount">Amount (INR)</Label>
-                                            <Input id="exp-amount" type="number" placeholder="e.g., 300" />
+                                            <Input id="exp-amount" type="number" placeholder="e.g., 300" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="exp-account">Account</Label>
+                                            <Select value={newExpense.accountName} onValueChange={value => setNewExpense({...newExpense, accountName: value})}>
+                                                <SelectTrigger id="exp-account">
+                                                    <SelectValue placeholder="Select an account" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {accounts.map(acc => (
+                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Cancel</Button>
-                                        </DialogClose>
-                                        <Button variant="destructive">Add Expense</Button>
+                                        <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>Cancel</Button>
+                                        <Button variant="destructive" onClick={handleAddExpense}>Add Expense</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -256,16 +328,18 @@ export default function BudgetPage() {
                                         <TableHead>Description</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>Date</TableHead>
+                                        <TableHead>Account</TableHead>
                                         <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {expenses.map((exp, i) => (
+                                    {expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((exp, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{exp.description}</TableCell>
                                             <TableCell><Badge>{exp.category}</Badge></TableCell>
                                             <TableCell>{exp.date}</TableCell>
-                                            <TableCell className="text-right text-destructive">- {Number(exp.amount).toLocaleString()}</TableCell>
+                                            <TableCell><Badge variant="secondary">{exp.accountName}</Badge></TableCell>
+                                            <TableCell className="text-right text-destructive">- {exp.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -276,9 +350,9 @@ export default function BudgetPage() {
                 {currentView === 'deposits' && (
                     <div>
                         <div className="flex justify-end mb-4">
-                            <Dialog>
+                            <Dialog open={isAddDepositOpen} onOpenChange={setIsAddDepositOpen}>
                                 <DialogTrigger asChild>
-                                    <Button><Plus className="mr-2 h-4 w-4" /> Add Deposit</Button>
+                                    <Button onClick={() => setNewDeposit(emptyDeposit)}><Plus className="mr-2 h-4 w-4" /> Add Deposit</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -288,18 +362,16 @@ export default function BudgetPage() {
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="dep-desc">Description</Label>
-                                            <Input id="dep-desc" placeholder="e.g., Monthly Salary" />
+                                            <Input id="dep-desc" placeholder="e.g., Monthly Salary" value={newDeposit.description} onChange={e => setNewDeposit({...newDeposit, description: e.target.value})} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="dep-amount">Amount (INR)</Label>
-                                            <Input id="dep-amount" type="number" placeholder="e.g., 75000" />
+                                            <Input id="dep-amount" type="number" placeholder="e.g., 75000" value={newDeposit.amount || ''} onChange={e => setNewDeposit({...newDeposit, amount: Number(e.target.value)})} />
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Cancel</Button>
-                                        </DialogClose>
-                                        <Button>Add Deposit</Button>
+                                        <Button variant="outline" onClick={() => setIsAddDepositOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleAddDeposit}>Add Deposit</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -314,11 +386,11 @@ export default function BudgetPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {deposits.map((dep, i) => (
+                                    {deposits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((dep, i) => (
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{dep.description}</TableCell>
                                             <TableCell>{dep.date}</TableCell>
-                                            <TableCell className="text-right text-primary">+ {Number(dep.amount).toLocaleString()}</TableCell>
+                                            <TableCell className="text-right text-primary">+ {dep.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -343,7 +415,7 @@ export default function BudgetPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Total Net Worth</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Your total net worth is calculated as: Total Available Balance + Total Deposits.
+                    Your total net worth is your total available balance across all accounts.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="py-4 text-center">
