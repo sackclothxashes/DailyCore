@@ -41,9 +41,7 @@ import { DataTable } from '@/components/app/patients/data-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-
-
-const initialPatients: Patient[] = [];
+import useLocalStorage from '@/hooks/use-local-storage';
 
 const emptyPatient: Omit<Patient, 'id' | 'status' | 'dischargeDate'> = {
   name: '',
@@ -58,7 +56,7 @@ const emptyPatient: Omit<Patient, 'id' | 'status' | 'dischargeDate'> = {
 };
 
 export default function PatientsPage() {
-  const [patients, setPatients] = React.useState<Patient[]>(initialPatients);
+  const [patients, setPatients] = useLocalStorage<Patient[]>("patients", []);
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -153,7 +151,7 @@ export default function PatientsPage() {
 
   const columns = React.useMemo(
     () => getColumns({ onEdit: handleEditClick, onDelete: handleDeleteClick, onDischarge: handleDischargeClick }),
-    []
+    [patients]
   );
 
   const currentPatients = patients.filter(p => p.status === 'Active' || p.status === 'Deceased');

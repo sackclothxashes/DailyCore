@@ -32,6 +32,7 @@ import {
   endOfWeek, 
   isWithinInterval 
 } from 'date-fns';
+import useLocalStorage from '@/hooks/use-local-storage';
 
 type Snapshot = {
   id: number;
@@ -41,8 +42,6 @@ type Snapshot = {
   hint: string;
   notes: string;
 };
-
-const initialImages: Snapshot[] = [];
 
 function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect: (image: Snapshot) => void }) {
   return (
@@ -71,7 +70,7 @@ function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect:
 }
 
 export default function DiaryPage() {
-  const [images, setImages] = useState<Snapshot[]>(initialImages);
+  const [images, setImages] = useLocalStorage<Snapshot[]>("diary_snapshots", []);
   const [selectedImage, setSelectedImage] = useState<Snapshot | null>(null);
   const [currentNotes, setCurrentNotes] = useState("");
 

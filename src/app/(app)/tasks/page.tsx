@@ -40,8 +40,7 @@ import { DataTable } from "@/components/app/tasks/data-table";
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-
-const initialData: Task[] = [];
+import useLocalStorage from '@/hooks/use-local-storage';
 
 const emptyTask: Omit<Task, 'id'> = {
   task: '',
@@ -54,7 +53,7 @@ const emptyTask: Omit<Task, 'id'> = {
 
 export default function TasksPage() {
   const { toast } = useToast();
-  const [tasks, setTasks] = React.useState<Task[]>(initialData);
+  const [tasks, setTasks] = useLocalStorage<Task[]>("tasks", []);
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -130,7 +129,7 @@ export default function TasksPage() {
 
   const columns = React.useMemo(
     () => getColumns({ onEdit: handleEditClick, onDelete: handleDeleteClick }),
-    []
+    [tasks]
   );
 
   const TaskForm = ({ isEdit = false }: { isEdit?: boolean }) => (

@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { useTasks, taskIcons } from "@/hooks/use-tasks";
 import Link from 'next/link';
 import type { Task } from '@/components/app/tasks/columns';
+import useLocalStorage from '@/hooks/use-local-storage';
 
 
 const features = [
@@ -76,12 +77,11 @@ export type Goal = {
   endDate: Date;
 };
 
-const tasksData: Task[] = [];
-
 
 export default function DashboardPage() {
-  const { tasks } = useTasks();
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const { tasks: dailyTasks } = useTasks();
+  const [tasks, setTasks] = useLocalStorage<Task[]>("tasks", []);
+  const [goals, setGoals] = useLocalStorage<Goal[]>("app-goals", []);
 
   const [isAddGoalDialogOpen, setIsAddGoalDialogOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
@@ -93,10 +93,10 @@ export default function DashboardPage() {
   const overdueTasksCount = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of today for accurate comparison
-    return tasksData.filter(
+    return tasks.filter(
         (task) => task.status !== "done" && new Date(task.dueDate) < today
     ).length;
-  }, []);
+  }, [tasks]);
 
   const handleAddGoal = () => {
     if (newGoalTitle && newGoalStartDate && newGoalEndDate) {
@@ -154,9 +154,9 @@ export default function DashboardPage() {
           />
         ))}
 
-        {tasks.length > 0 && (
+        {dailyTasks.length > 0 && (
             <div className="col-span-1 md:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-x-6 gap-y-4">
-                {tasks.map(task => {
+                {dailyTasks.map(task => {
                     const IconComponent = taskIcons[task.icon];
                     return (
                         <div key={task.id} title={task.title} className="flex items-center gap-2 p-2 rounded-lg bg-secondary cursor-default">

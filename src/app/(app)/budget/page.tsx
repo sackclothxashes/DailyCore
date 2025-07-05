@@ -41,6 +41,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { format } from 'date-fns';
+import useLocalStorage from "@/hooks/use-local-storage";
 
 
 // --- Data Types ---
@@ -54,14 +55,6 @@ type InvestmentTransaction = { description: string; amount: number; date: string
 // --- Dynamic Initial Data ---
 const formatDateString = (date: Date) => date.toISOString().split('T')[0];
 
-const initialIncomes: Income[] = [];
-
-const initialExpenses: Expense[] = [];
-
-const initialInvestmentTransactions: InvestmentTransaction[] = [];
-
-const initialAccounts: Account[] = [];
-
 // --- Empty States for Forms ---
 const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
@@ -71,10 +64,10 @@ const emptyInvestment: Omit<InvestmentTransaction, 'date'> = { description: '', 
 
 export default function BudgetPage() {
     const { toast } = useToast();
-    const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
-    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-    const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
-    const [investmentTransactions, setInvestmentTransactions] = useState<InvestmentTransaction[]>(initialInvestmentTransactions);
+    const [accounts, setAccounts] = useLocalStorage<Account[]>("budget_accounts", []);
+    const [expenses, setExpenses] = useLocalStorage<Expense[]>("budget_expenses", []);
+    const [incomes, setIncomes] = useLocalStorage<Income[]>("budget_incomes", []);
+    const [investmentTransactions, setInvestmentTransactions] = useLocalStorage<InvestmentTransaction[]>("budget_investmentTransactions", []);
     const [currentView, setCurrentView] = useState('overview');
 
     // Dialog states

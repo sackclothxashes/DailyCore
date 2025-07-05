@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { 
   ClipboardCheck, 
   Brain, 
@@ -23,6 +24,7 @@ import {
   Cat,
   Route
 } from 'lucide-react';
+import useLocalStorage from './use-local-storage';
 
 // Define the icons that can be used for tasks
 export const taskIcons = {
@@ -67,40 +69,8 @@ type TasksContextType = {
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
-// Helper to get initial state from localStorage
-const getInitialState = (): DailyTask[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  try {
-    const item = window.localStorage.getItem('dailyTasks');
-    return item ? JSON.parse(item) : [];
-  } catch (error) {
-    console.error("Error reading from localStorage", error);
-    return [];
-  }
-};
-
-
 export const TasksProvider = ({ children }: { children: ReactNode }) => {
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
-
-  // Load state from localStorage on initial render
-  useEffect(() => {
-    setTasks(getInitialState());
-  }, []);
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    if (tasks.length > 0 || localStorage.getItem('dailyTasks')) {
-      try {
-        window.localStorage.setItem('dailyTasks', JSON.stringify(tasks));
-      } catch (error) {
-        console.error("Error writing to localStorage", error);
-      }
-    }
-  }, [tasks]);
-
+  const [tasks, setTasks] = useLocalStorage<DailyTask[]>('dailyTasks', []);
 
   const addTask = (title: string, icon: TaskIconName) => {
     const newTask: DailyTask = {
