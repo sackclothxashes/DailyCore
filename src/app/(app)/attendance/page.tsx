@@ -10,6 +10,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 type AttendanceStatus = 'Present' | 'Casual Leave' | 'Earned/Sick Leave' | 'Weekly Off' | 'Transfer';
 type AttendanceData = Record<string, AttendanceStatus>; // Key: 'yyyy-MM-dd'
@@ -52,15 +53,17 @@ export default function AttendancePage() {
         setAttendance(prev => ({ ...prev, [dateKey]: status }));
     };
 
-    const leaveCounts = React.useMemo(() => {
+    const attendanceCounts = React.useMemo(() => {
         return Object.values(attendance).reduce((acc, status) => {
-            if (status === 'Casual Leave') {
+            if (status === 'Present') {
+                acc.present += 1;
+            } else if (status === 'Casual Leave') {
                 acc.casual += 1;
             } else if (status === 'Earned/Sick Leave') {
                 acc.earned += 1;
             }
             return acc;
-        }, { casual: 0, earned: 0 });
+        }, { present: 0, casual: 0, earned: 0 });
     }, [attendance]);
     
     const modifiers = React.useMemo(() => {
@@ -93,13 +96,23 @@ export default function AttendancePage() {
                 description="Mark your attendance starting from July 1, 2025."
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Days Present</CardTitle>
+                        <CardDescription>Goal: 730 days</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold mb-2">{attendanceCounts.present}</p>
+                        <Progress value={(attendanceCounts.present / 730) * 100} />
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Casual Leave Taken</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-3xl font-bold">{leaveCounts.casual}</p>
+                        <p className="text-3xl font-bold">{attendanceCounts.casual}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -107,7 +120,7 @@ export default function AttendancePage() {
                         <CardTitle>Earned/Sick Leave Taken</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-3xl font-bold">{leaveCounts.earned}</p>
+                        <p className="text-3xl font-bold">{attendanceCounts.earned}</p>
                     </CardContent>
                 </Card>
             </div>
