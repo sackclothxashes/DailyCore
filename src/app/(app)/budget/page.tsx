@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank, Briefcase, BarChart } from "lucide-react";
@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { format } from 'date-fns';
+import { format, startOfMonth, startOfWeek, startOfYear, isAfter, isSameDay } from 'date-fns';
 import useLocalStorage from "@/hooks/use-local-storage";
 import { Progress } from "@/components/ui/progress";
 
@@ -50,7 +50,13 @@ type Transaction = { description: string; amount: number; date: string };
 type Expense = Transaction & { category: string; accountName: string };
 type Income = Transaction & { accountName: string };
 type InvestmentTransaction = { description: string; amount: number; date: string; sourceAccountName: string; };
-type Budget = { id: string; name: string; limit: number; category: string };
+type Budget = { 
+    id: string; 
+    name: string; 
+    limit: number; 
+    category: string;
+    resetFrequency: 'monthly' | 'weekly' | 'yearly' | 'none';
+};
 
 
 // --- Dynamic Initial Data ---
@@ -61,7 +67,7 @@ const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
 const emptyIncome: Omit<Income, 'date'> = { description: '', amount: 0, accountName: '' };
 const emptyInvestment: Omit<InvestmentTransaction, 'date'> = { description: '', amount: 0, sourceAccountName: '' };
-const emptyBudget: Omit<Budget, 'id'> = { name: '', limit: 0, category: '' };
+const emptyBudget: Omit<Budget, 'id'> = { name: '', limit: 0, category: '', resetFrequency: 'monthly' };
 
 
 export default function BudgetPage() {
@@ -218,10 +224,41 @@ export default function BudgetPage() {
       } satisfies ChartConfig;
     
     const budgetProgressData = useMemo(() => {
+        const today = new Date();
         return budgets.map(budget => {
+            let startDate: Date;
+
+            switch (budget.resetFrequency) {
+                case 'weekly':
+                    startDate = startOfWeek(today);
+                    break;
+                case 'yearly':
+                    startDate = startOfYear(today);
+                    break;
+                case 'monthly':
+                    startDate = startOfMonth(today);
+                    break;
+                case 'none':
+                    // A very old date to include all expenses
+                    startDate = new Date(0); 
+                    break;
+                default:
+                    startDate = startOfMonth(today);
+                    break;
+            }
+
             const spent = expenses
-                .filter(exp => exp.category.toLowerCase() === budget.category.toLowerCase())
+                .filter(exp => {
+                    if (exp.category.toLowerCase() !== budget.category.toLowerCase()) {
+                        return false;
+                    }
+                    const expenseDate = new Date(exp.date);
+                    if (isNaN(expenseDate.getTime())) return false; // Invalid date check
+                    
+                    return isAfter(expenseDate, startDate) || isSameDay(expenseDate, startDate);
+                })
                 .reduce((sum, exp) => sum + exp.amount, 0);
+                
             const progress = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
             return { ...budget, spent, progress };
         });
@@ -393,16 +430,22 @@ export default function BudgetPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {budgetProgressData.length > 0 ? (
-                                    budgetProgressData.map(budget => (
-                                        <div key={budget.id}>
-                                            <div className="flex justify-between mb-1 text-sm">
-                                                <span className="font-medium">{budget.name} ({budget.category})</span>
-                                                <span className="text-muted-foreground">
-                                                    INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
-                                                </span>
+                                    budgetProgressData.map((budget, index) => (
+                                        <React.Fragment key={budget.id}>
+                                            <div>
+                                                <div className="flex justify-between mb-1 text-sm">
+                                                    <span className="font-medium">{budget.name} ({budget.category})</span>
+                                                    <span className="text-muted-foreground">
+                                                        INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <Progress value={budget.progress} className="h-2" />
+                                                <p className="text-right text-xs capitalize text-muted-foreground mt-1">
+                                                    Resets {budget.resetFrequency}
+                                                </p>
                                             </div>
-                                            <Progress value={budget.progress} className="h-2" />
-                                        </div>
+                                            {index < budgetProgressData.length - 1 && <Separator className="my-4" />}
+                                        </React.Fragment>
                                     ))
                                 ) : (
                                     <div className="text-center text-muted-foreground py-4">
@@ -619,6 +662,18 @@ export default function BudgetPage() {
                         <div className="space-y-2">
                             <Label htmlFor="budget-category">Category (Tag)</Label>
                             <Input id="budget-category" placeholder="e.g., Groceries" value={newBudget.category} onChange={e => setNewBudget({...newBudget, category: e.target.value})} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="budget-reset">Reset Frequency</Label>
+                            <Select value={newBudget.resetFrequency} onValueChange={(value: 'monthly' | 'weekly' | 'yearly' | 'none') => setNewBudget({...newBudget, resetFrequency: value })}>
+                                <SelectTrigger id="budget-reset"><SelectValue placeholder="Select reset frequency" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                    <SelectItem value="none">Never</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
