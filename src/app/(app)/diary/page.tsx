@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -41,19 +42,7 @@ type Snapshot = {
   notes: string;
 };
 
-// Generate ~3 months of data for demonstration
-const startDate = new Date('2025-06-01T00:00:00');
-const initialImages: Snapshot[] = Array.from({ length: 90 }, (_, i) => {
-  const currentDate = addDays(startDate, i);
-  return {
-    id: i + 1,
-    src: `https://placehold.co/600x400.png`,
-    alt: `Snapshot for ${format(currentDate, 'PPP')}`,
-    date: currentDate,
-    hint: `day ${i + 1}`,
-    notes: "",
-  };
-});
+const initialImages: Snapshot[] = [];
 
 function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect: (image: Snapshot) => void }) {
   return (
@@ -86,7 +75,7 @@ export default function DiaryPage() {
   const [selectedImage, setSelectedImage] = useState<Snapshot | null>(null);
   const [currentNotes, setCurrentNotes] = useState("");
 
-  const [currentDate, setCurrentDate] = useState(new Date('2025-07-01T00:00:00'));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
 
   const handleImageSelect = (image: Snapshot) => {

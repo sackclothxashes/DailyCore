@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -75,61 +76,12 @@ export type Goal = {
   endDate: Date;
 };
 
-// Mock data for tasks - in a real app, this would be fetched from a shared store or API
-const tasksData: Task[] = [
-    {
-      id: "TASK-8782",
-      task: "Complete project proposal",
-      status: "in-progress",
-      priority: "High",
-      category: "Work",
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0],
-    },
-    {
-      id: "TASK-7878",
-      task: "Schedule dentist appointment",
-      status: "todo",
-      priority: "Medium",
-      category: "Health",
-      dueDate: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString().split('T')[0], // Overdue
-    },
-    {
-      id: "TASK-4532",
-      task: "Buy groceries",
-      status: "todo",
-      priority: "Low",
-      category: "Personal",
-      dueDate: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0], // Overdue
-    },
-    {
-      id: "TASK-9434",
-      task: "Pay electricity bill",
-      status: "done",
-      priority: "High",
-      category: "Finance",
-      dueDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0], // Done, not overdue
-    },
-    {
-      id: "TASK-5435",
-      task: "Team meeting presentation",
-      status: "in-progress",
-      priority: "Medium",
-      category: "Work",
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0],
-    },
-];
+const tasksData: Task[] = [];
 
 
 export default function DashboardPage() {
   const { tasks } = useTasks();
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: 'default-goal',
-      title: 'Monthly Progress',
-      startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-    }
-  ]);
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   const [isAddGoalDialogOpen, setIsAddGoalDialogOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -40,48 +41,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
-const initialData: Task[] = [
-    {
-      id: "TASK-8782",
-      task: "Complete project proposal",
-      status: "in-progress",
-      priority: "High",
-      category: "Work",
-      dueDate: "2024-08-15",
-    },
-    {
-      id: "TASK-7878",
-      task: "Schedule dentist appointment",
-      status: "todo",
-      priority: "Medium",
-      category: "Health",
-      dueDate: "2024-08-10",
-    },
-    {
-      id: "TASK-4532",
-      task: "Buy groceries",
-      status: "todo",
-      priority: "Low",
-      category: "Personal",
-      dueDate: "2024-08-05",
-    },
-    {
-      id: "TASK-9434",
-      task: "Pay electricity bill",
-      status: "done",
-      priority: "High",
-      category: "Finance",
-      dueDate: "2024-07-30",
-    },
-    {
-      id: "TASK-5435",
-      task: "Team meeting presentation",
-      status: "in-progress",
-      priority: "Medium",
-      category: "Work",
-      dueDate: "2024-08-12",
-    },
-];
+const initialData: Task[] = [];
 
 const emptyTask: Omit<Task, 'id'> = {
   task: '',

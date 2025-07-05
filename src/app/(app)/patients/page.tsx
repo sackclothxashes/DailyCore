@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -42,70 +43,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 
-const initialPatients: Patient[] = [
-  {
-    id: 'PAT-001',
-    name: 'John Doe',
-    age: 45,
-    sex: 'Male',
-    diagnosis: 'Hypertension',
-    treatment: 'Lisinopril',
-    status: 'Active',
-    presentingComplaints: 'Headaches, dizziness',
-    comorbidities: 'None',
-    admissionDate: new Date('2024-07-10'),
-  },
-  {
-    id: 'PAT-002',
-    name: 'Jane Smith',
-    age: 34,
-    sex: 'Female',
-    diagnosis: 'Type 2 Diabetes',
-    treatment: 'Metformin',
-    status: 'Active',
-    presentingComplaints: 'Fatigue, frequent urination',
-    comorbidities: 'Obesity',
-    admissionDate: new Date('2024-07-12'),
-  },
-  {
-    id: 'PAT-003',
-    name: 'Peter Jones',
-    age: 62,
-    sex: 'Male',
-    diagnosis: 'Pneumonia',
-    treatment: 'Amoxicillin',
-    status: 'Discharged',
-    presentingComplaints: 'Cough, fever, shortness of breath',
-    comorbidities: 'COPD',
-    adviceOnDischarge: 'Continue full course of antibiotics. Follow up in 1 week.',
-    admissionDate: new Date('2024-07-01'),
-    dischargeDate: new Date('2024-07-08'),
-  },
-  {
-    id: 'PAT-004',
-    name: 'Mary Johnson',
-    age: 78,
-    sex: 'Female',
-    diagnosis: 'Heart Failure',
-    treatment: 'Furosemide',
-    status: 'Deceased',
-    presentingComplaints: 'Shortness of breath, swelling in legs',
-    comorbidities: 'Kidney disease',
-    admissionDate: new Date('2024-06-20'),
-  },
-  {
-    id: 'PAT-005',
-    name: 'David Williams',
-    age: 29,
-    sex: 'Male',
-    diagnosis: 'Asthma',
-    treatment: 'Albuterol Inhaler',
-    status: 'Active',
-    presentingComplaints: 'Wheezing, chest tightness',
-    comorbidities: 'Allergic rhinitis',
-    admissionDate: new Date('2024-07-15'),
-  },
-];
+const initialPatients: Patient[] = [];
 
 const emptyPatient: Omit<Patient, 'id' | 'status' | 'dischargeDate'> = {
   name: '',

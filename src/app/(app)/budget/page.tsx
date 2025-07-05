@@ -52,34 +52,15 @@ type InvestmentTransaction = { description: string; amount: number; date: string
 
 
 // --- Dynamic Initial Data ---
-const today = new Date();
-const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-const middleOfMonth = new Date(today.getFullYear(), today.getMonth(), 15);
-const yesterday = new Date();
-yesterday.setDate(today.getDate() - 1);
-const investmentDate = new Date(today.getFullYear(), today.getMonth(), 5);
-
 const formatDateString = (date: Date) => date.toISOString().split('T')[0];
 
-const initialIncomes: Income[] = [
-    { description: "Monthly Salary", amount: 75000, date: formatDateString(firstDayOfMonth), accountName: "Main Bank" },
-];
+const initialIncomes: Income[] = [];
 
-const initialExpenses: Expense[] = [
-    { description: "Groceries", category: "Food", amount: 3000, date: formatDateString(yesterday), accountName: "Main Bank" },
-    { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDateString(middleOfMonth), accountName: "Main Bank" },
-];
+const initialExpenses: Expense[] = [];
 
-const initialInvestmentTransactions: InvestmentTransaction[] = [
-    { description: "Mutual Fund SIP", amount: 5000, date: formatDateString(investmentDate), sourceAccountName: "Main Bank" },
-];
+const initialInvestmentTransactions: InvestmentTransaction[] = [];
 
-// Consistent initial balances
-const initialAccounts: Account[] = [
-    { name: "Main Bank", type: "Savings", balance: 65500 }, // 75000 (income) - 3000 (exp) - 1500 (exp) - 5000 (inv)
-    { name: "Credit Card", type: "Credit", balance: 0 },
-    { name: "Mutual Fund SIP", type: "Investment", balance: 5000 },
-];
+const initialAccounts: Account[] = [];
 
 // --- Empty States for Forms ---
 const emptyAccount: Account = { name: '', type: '', balance: 0 };
@@ -766,5 +747,3 @@ export default function BudgetPage() {
         </div>
     );
 }
-
-    
