@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { format } from 'date-fns';
 import useLocalStorage from "@/hooks/use-local-storage";
+import { Progress } from "@/components/ui/progress";
 
 
 // --- Data Types ---
@@ -49,6 +50,7 @@ type Transaction = { description: string; amount: number; date: string };
 type Expense = Transaction & { category: string; accountName: string };
 type Income = Transaction & { accountName: string };
 type InvestmentTransaction = { description: string; amount: number; date: string; sourceAccountName: string; };
+type Budget = { id: string; name: string; limit: number; category: string };
 
 
 // --- Dynamic Initial Data ---
@@ -59,6 +61,7 @@ const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
 const emptyIncome: Omit<Income, 'date'> = { description: '', amount: 0, accountName: '' };
 const emptyInvestment: Omit<InvestmentTransaction, 'date'> = { description: '', amount: 0, sourceAccountName: '' };
+const emptyBudget: Omit<Budget, 'id'> = { name: '', limit: 0, category: '' };
 
 
 export default function BudgetPage() {
@@ -67,6 +70,7 @@ export default function BudgetPage() {
     const [expenses, setExpenses] = useLocalStorage<Expense[]>("budget_expenses", []);
     const [incomes, setIncomes] = useLocalStorage<Income[]>("budget_incomes", []);
     const [investmentTransactions, setInvestmentTransactions] = useLocalStorage<InvestmentTransaction[]>("budget_investmentTransactions", []);
+    const [budgets, setBudgets] = useLocalStorage<Budget[]>("budget_budgets", []);
     const [currentView, setCurrentView] = useState('overview');
 
     // Dialog states
@@ -74,6 +78,7 @@ export default function BudgetPage() {
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
     const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
     const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
+    const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false);
     const [showNetWorthDialog, setShowNetWorthDialog] = useState(false);
 
     // Form states
@@ -81,6 +86,7 @@ export default function BudgetPage() {
     const [newExpense, setNewExpense] = useState(emptyExpense);
     const [newIncome, setNewIncome] = useState<Omit<Income, 'date'>>(emptyIncome);
     const [newInvestment, setNewInvestment] = useState(emptyInvestment);
+    const [newBudget, setNewBudget] = useState(emptyBudget);
 
     // --- Corrected Financial Calculations ---
     const assetAccounts = useMemo(() => 
@@ -210,7 +216,16 @@ export default function BudgetPage() {
           color: 'hsl(var(--destructive))',
         },
       } satisfies ChartConfig;
-
+    
+    const budgetProgressData = useMemo(() => {
+        return budgets.map(budget => {
+            const spent = expenses
+                .filter(exp => exp.category.toLowerCase() === budget.category.toLowerCase())
+                .reduce((sum, exp) => sum + exp.amount, 0);
+            const progress = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
+            return { ...budget, spent, progress };
+        });
+    }, [budgets, expenses]);
     
     const handleAddAccount = () => {
         if (!newAccount.name || !newAccount.type) {
@@ -313,6 +328,17 @@ export default function BudgetPage() {
         setNewInvestment(emptyInvestment);
         setIsAddInvestmentOpen(false);
     };
+    
+    const handleAddBudget = () => {
+        if (!newBudget.name || !newBudget.limit || !newBudget.category) {
+            toast({ title: "Error", description: "Please fill in all budget details.", variant: "destructive" });
+            return;
+        }
+        const budgetToAdd: Budget = { ...newBudget, id: `budget-${Date.now()}` };
+        setBudgets([...budgets, budgetToAdd]);
+        setNewBudget(emptyBudget);
+        setIsAddBudgetOpen(false);
+    };
 
 
     return (
@@ -354,19 +380,38 @@ export default function BudgetPage() {
             <div className="mt-6">
                 {currentView === 'overview' && (
                     <div className="space-y-6">
-                        <div className="rounded-lg bg-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <Landmark className="h-8 w-8 text-muted-foreground" />
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
-                                    <h3 className="font-semibold text-card-foreground text-lg">Budget Setup</h3>
-                                    <p className="text-sm text-muted-foreground">Set your monthly income and track cash on hand</p>
+                                    <CardTitle>Your Budgets</CardTitle>
+                                    <CardDescription>Track spending against your budget goals.</CardDescription>
                                 </div>
-                            </div>
-                            <Button className="w-full sm:w-auto" onClick={() => setIsAddAccountOpen(true)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Setup Budget
-                            </Button>
-                        </div>
+                                <Button onClick={() => { setIsAddBudgetOpen(true); setNewBudget(emptyBudget); }}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Budget
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {budgetProgressData.length > 0 ? (
+                                    budgetProgressData.map(budget => (
+                                        <div key={budget.id}>
+                                            <div className="flex justify-between mb-1 text-sm">
+                                                <span className="font-medium">{budget.name} ({budget.category})</span>
+                                                <span className="text-muted-foreground">
+                                                    INR {budget.spent.toLocaleString()} / {budget.limit.toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <Progress value={budget.progress} className="h-2" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center text-muted-foreground py-4">
+                                        <p>You haven't set any budgets yet.</p>
+                                        <p className="text-sm">Click "Add Budget" to get started.</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         {expenseChartData.length > 0 ? (
                             <Card>
@@ -556,6 +601,33 @@ export default function BudgetPage() {
             </div>
 
             {/* --- Dialogs --- */}
+            <Dialog open={isAddBudgetOpen} onOpenChange={setIsAddBudgetOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Budget</DialogTitle>
+                        <DialogDescriptionComponent>Set a budget for a specific spending category.</DialogDescriptionComponent>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-name">Budget Name</Label>
+                            <Input id="budget-name" placeholder="e.g., Monthly Groceries" value={newBudget.name} onChange={e => setNewBudget({...newBudget, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-limit">Amount (INR)</Label>
+                            <Input id="budget-limit" type="number" placeholder="e.g., 10000" value={newBudget.limit || ''} onChange={e => setNewBudget({...newBudget, limit: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="budget-category">Category (Tag)</Label>
+                            <Input id="budget-category" placeholder="e.g., Groceries" value={newBudget.category} onChange={e => setNewBudget({...newBudget, category: e.target.value})} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddBudgetOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddBudget}>Add Budget</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
                 <DialogContent>
                     <DialogHeader>
