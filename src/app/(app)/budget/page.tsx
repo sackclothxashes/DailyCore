@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, LineChart, CreditCard, Landmark, Plus } from "lucide-react";
+import { DollarSign, LineChart, CreditCard, Landmark, Plus, PiggyBank } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,15 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,11 +30,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
 
-const summaryData = [
-  { title: "Total Balance", value: "INR 0", description: "Across 0 accounts", Icon: LineChart },
-  { title: "Monthly Salary", value: "INR 0", description: "Set your monthly income", Icon: DollarSign },
-  { title: "Monthly Expenses", value: "INR 0", description: "This month's spending", Icon: CreditCard },
-];
+// --- Dynamic Initial Data ---
+const today = new Date();
+const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+const middleOfMonth = new Date(today.getFullYear(), today.getMonth(), 15);
+const yesterday = new Date();
+yesterday.setDate(today.getDate() - 1);
+
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 const initialAccounts = [
     { name: "Main Bank", type: "Savings", balance: "50000" },
@@ -33,12 +45,12 @@ const initialAccounts = [
 ];
 
 const initialExpenses = [
-    { description: "Groceries", category: "Food", amount: "3000", date: "2024-07-25" },
-    { description: "Electricity Bill", category: "Utilities", amount: "1500", date: "2024-07-22" },
+    { description: "Groceries", category: "Food", amount: "3000", date: formatDate(yesterday) },
+    { description: "Electricity Bill", category: "Utilities", amount: "1500", date: formatDate(middleOfMonth) },
 ];
 
 const initialDeposits = [
-    { description: "Monthly Salary", amount: "75000", date: "2024-07-01" },
+    { description: "Monthly Salary", amount: "75000", date: formatDate(firstDayOfMonth) },
 ];
 
 
@@ -47,6 +59,37 @@ export default function BudgetPage() {
     const [expenses, setExpenses] = useState(initialExpenses);
     const [deposits, setDeposits] = useState(initialDeposits);
     const [currentView, setCurrentView] = useState('overview');
+    const [showNetWorthDialog, setShowNetWorthDialog] = useState(false);
+
+    const totalBalance = useMemo(() => 
+        accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
+        [accounts]
+    );
+
+    const monthlyExpenses = useMemo(() => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        return expenses
+          .filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+          })
+          .reduce((sum, exp) => sum + Number(exp.amount), 0);
+    }, [expenses]);
+    
+    const totalDeposits = useMemo(() =>
+        deposits.reduce((sum, dep) => sum + Number(dep.amount), 0),
+        [deposits]
+    );
+
+    const netWorth = useMemo(() => totalBalance + totalDeposits, [totalBalance, totalDeposits]);
+
+    const summaryData = [
+      { title: "Total Available balance", value: `INR ${totalBalance.toLocaleString()}`, description: `Across ${accounts.length} accounts`, Icon: LineChart },
+      { title: "Total Deposits", value: `INR ${totalDeposits.toLocaleString()}`, description: "Total income received", Icon: DollarSign },
+      { title: "Monthly Expenses", value: `INR ${monthlyExpenses.toLocaleString()}`, description: "This month's spending", Icon: CreditCard },
+    ];
 
     return (
         <div className="space-y-8">
@@ -289,6 +332,28 @@ export default function BudgetPage() {
                     </div>
                 )}
             </div>
+            <div className="flex justify-center mt-8">
+                <Button onClick={() => setShowNetWorthDialog(true)}>
+                    <PiggyBank className="mr-2 h-4 w-4"/> Show Total Net Worth
+                </Button>
+            </div>
+            
+            <AlertDialog open={showNetWorthDialog} onOpenChange={setShowNetWorthDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Total Net Worth</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Your total net worth is calculated as: Total Available Balance + Total Deposits.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4 text-center">
+                    <p className="text-4xl font-bold">INR {netWorth.toLocaleString()}</p>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogAction onClick={() => setShowNetWorthDialog(false)}>Close</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
