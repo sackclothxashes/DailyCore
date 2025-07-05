@@ -34,6 +34,8 @@ import { useToast } from "@/hooks/use-toast";
 type Account = { name: string; type: string; balance: number };
 type Transaction = { description: string; amount: number; date: string };
 type Expense = Transaction & { category: string; accountName: string };
+type Deposit = Transaction & { accountName: string };
+
 
 // --- Dynamic Initial Data ---
 const today = new Date();
@@ -44,32 +46,32 @@ yesterday.setDate(today.getDate() - 1);
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
+// A more logical initial state where transactions are reflected in balances.
 const initialAccounts: Account[] = [
-    { name: "Main Bank", type: "Savings", balance: 50000 },
-    { name: "Credit Card", type: "Credit", balance: -15000 },
+    { name: "Main Bank", type: "Savings", balance: 75000 - 3000 - 1500 }, // Salary deposit minus both expenses
+    { name: "Credit Card", type: "Credit", balance: 0 },
 ];
 
-// For demonstration, assume initial expenses came from the Main Bank
 const initialExpenses: Expense[] = [
     { description: "Groceries", category: "Food", amount: 3000, date: formatDate(yesterday), accountName: "Main Bank" },
     { description: "Electricity Bill", category: "Utilities", amount: 1500, date: formatDate(middleOfMonth), accountName: "Main Bank" },
 ];
 
-const initialDeposits: Transaction[] = [
-    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth) },
+const initialDeposits: Deposit[] = [
+    { description: "Monthly Salary", amount: 75000, date: formatDate(firstDayOfMonth), accountName: "Main Bank" },
 ];
 
 // --- Empty States for Forms ---
 const emptyAccount: Account = { name: '', type: '', balance: 0 };
 const emptyExpense: Omit<Expense, 'date'> = { description: '', category: '', amount: 0, accountName: '' };
-const emptyDeposit: Omit<Transaction, 'date'> = { description: '', amount: 0 };
+const emptyDeposit: Omit<Deposit, 'date'> = { description: '', amount: 0, accountName: '' };
 
 
 export default function BudgetPage() {
     const { toast } = useToast();
     const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-    const [deposits, setDeposits] = useState<Transaction[]>(initialDeposits);
+    const [deposits, setDeposits] = useState<Deposit[]>(initialDeposits);
     const [currentView, setCurrentView] = useState('overview');
 
     // Dialog states
@@ -81,7 +83,7 @@ export default function BudgetPage() {
     // Form states
     const [newAccount, setNewAccount] = useState<Account>(emptyAccount);
     const [newExpense, setNewExpense] = useState(emptyExpense);
-    const [newDeposit, setNewDeposit] = useState(emptyDeposit);
+    const [newDeposit, setNewDeposit] = useState<Omit<Deposit, 'date'>>(emptyDeposit);
 
     const totalBalance = useMemo(() => 
         accounts.reduce((sum, acc) => sum + acc.balance, 0),
@@ -143,12 +145,20 @@ export default function BudgetPage() {
     };
     
     const handleAddDeposit = () => {
-        if (!newDeposit.description || !newDeposit.amount) {
+        if (!newDeposit.description || !newDeposit.amount || !newDeposit.accountName) {
             toast({ title: "Error", description: "Please fill in all deposit details.", variant: "destructive" });
             return;
         }
-        const depositToAdd = { ...newDeposit, date: formatDate(new Date()) };
+        const depositToAdd: Deposit = { ...newDeposit, date: formatDate(new Date()) };
         setDeposits([...deposits, depositToAdd]);
+
+        const updatedAccounts = accounts.map(acc => 
+            acc.name === newDeposit.accountName 
+            ? { ...acc, balance: acc.balance + newDeposit.amount }
+            : acc
+        );
+        setAccounts(updatedAccounts);
+
         setNewDeposit(emptyDeposit);
         setIsAddDepositOpen(false);
     };
@@ -368,6 +378,19 @@ export default function BudgetPage() {
                                             <Label htmlFor="dep-amount">Amount (INR)</Label>
                                             <Input id="dep-amount" type="number" placeholder="e.g., 75000" value={newDeposit.amount || ''} onChange={e => setNewDeposit({...newDeposit, amount: Number(e.target.value)})} />
                                         </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dep-account">Account</Label>
+                                            <Select value={newDeposit.accountName} onValueChange={value => setNewDeposit({...newDeposit, accountName: value})}>
+                                                <SelectTrigger id="dep-account">
+                                                    <SelectValue placeholder="Select an account" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {accounts.map(acc => (
+                                                        <SelectItem key={acc.name} value={acc.name}>{acc.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                     <DialogFooter>
                                         <Button variant="outline" onClick={() => setIsAddDepositOpen(false)}>Cancel</Button>
@@ -382,6 +405,7 @@ export default function BudgetPage() {
                                     <TableRow>
                                         <TableHead>Description</TableHead>
                                         <TableHead>Date</TableHead>
+                                        <TableHead>Account</TableHead>
                                         <TableHead className="text-right">Amount (INR)</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -390,6 +414,7 @@ export default function BudgetPage() {
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{dep.description}</TableCell>
                                             <TableCell>{dep.date}</TableCell>
+                                            <TableCell><Badge variant="secondary">{dep.accountName}</Badge></TableCell>
                                             <TableCell className="text-right text-primary">+ {dep.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
@@ -415,7 +440,7 @@ export default function BudgetPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Total Net Worth</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Your total net worth is your total available balance across all accounts.
+                    This is your true net worth (assets minus liabilities), which is the total of all your account balances. All deposits and expenses are already factored in.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="py-4 text-center">
