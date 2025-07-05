@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Flame, PlusCircle, Trash2, ClipboardCheck } from "lucide-react";
+import { Flame, PlusCircle, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from '@/components/ui/button';
 import {
@@ -21,23 +21,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-type DailyTask = {
-  id: string;
-  title: string;
-  icon: React.ElementType;
-  streak: number;
-  completed: boolean;
-};
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTasks, taskIcons, TaskIconName } from "@/hooks/use-tasks";
 
 
 export default function PlannerPage() {
   const [currentDateString, setCurrentDateString] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
+  const { tasks, addTask, deleteTask, toggleTaskCompletion } = useTasks();
   
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskIcon, setNewTaskIcon] = useState<TaskIconName | ''>('');
 
   useEffect(() => {
     const today = new Date();
@@ -46,31 +41,12 @@ export default function PlannerPage() {
   }, []);
 
   const handleAddTask = () => {
-    if (!newTaskTitle.trim()) return;
-
-    const newTask: DailyTask = {
-      id: `task-${Date.now()}`,
-      title: newTaskTitle,
-      icon: ClipboardCheck,
-      streak: 0,
-      completed: false
-    };
-
-    setTasks([...tasks, newTask]);
+    if (!newTaskTitle.trim() || !newTaskIcon) return;
+    addTask(newTaskTitle, newTaskIcon);
     setNewTaskTitle('');
+    setNewTaskIcon('');
     setIsAddTaskOpen(false);
   };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
-  };
-  
-  const handleToggleCompletion = (taskId: string) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
-  };
-
 
   return (
     <div>
@@ -111,6 +87,27 @@ export default function PlannerPage() {
                             placeholder="e.g., Meditate for 10 minutes"
                           />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="task-icon">Icon</Label>
+                            <Select value={newTaskIcon} onValueChange={(value) => setNewTaskIcon(value as TaskIconName)}>
+                                <SelectTrigger id="task-icon">
+                                    <SelectValue placeholder="Select an icon" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.keys(taskIcons).map(iconName => {
+                                        const IconComponent = taskIcons[iconName as TaskIconName];
+                                        return (
+                                            <SelectItem key={iconName} value={iconName}>
+                                                <div className="flex items-center gap-2">
+                                                    <IconComponent className="w-4 h-4" />
+                                                    <span>{iconName}</span>
+                                                </div>
+                                            </SelectItem>
+                                        )
+                                    })}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <DialogFooter>
                       <DialogClose asChild>
@@ -125,13 +122,15 @@ export default function PlannerPage() {
             <CardContent>
               {tasks.length > 0 ? (
                 <ul className="space-y-4">
-                  {tasks.map((task, index) => (
+                  {tasks.map((task, index) => {
+                    const IconComponent = taskIcons[task.icon];
+                    return (
                     <React.Fragment key={task.id}>
                       <li className="flex items-center justify-between p-2 rounded-md hover:bg-secondary">
                         <div className="flex items-center gap-4">
-                          <Checkbox id={task.id} checked={task.completed} onCheckedChange={() => handleToggleCompletion(task.id)} />
+                          <Checkbox id={task.id} checked={task.completed} onCheckedChange={() => toggleTaskCompletion(task.id)} />
                           <label htmlFor={task.id} className="flex items-center gap-3 cursor-pointer">
-                            <task.icon className="w-5 h-5 text-muted-foreground" />
+                            <IconComponent className="w-5 h-5 text-muted-foreground" />
                             <span className="font-medium">{task.title}</span>
                           </label>
                         </div>
@@ -140,14 +139,14 @@ export default function PlannerPage() {
                             <Flame className="w-5 h-5" />
                             <span className="font-semibold">{task.streak}</span>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteTask(task.id)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteTask(task.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </li>
                       {index < tasks.length - 1 && <Separator />}
                     </React.Fragment>
-                  ))}
+                  )})}
                 </ul>
               ) : (
                 <div className="text-center text-muted-foreground py-10">
