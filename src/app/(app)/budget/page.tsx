@@ -29,6 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
 
 // --- Data Types ---
 type Account = { name: string; type: string; balance: number };
@@ -48,7 +49,7 @@ const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 // A more logical initial state where transactions are reflected in balances.
 const initialAccounts: Account[] = [
-    { name: "Main Bank", type: "Savings", balance: 75000 - 3000 - 1500 }, // Salary deposit minus both expenses
+    { name: "Main Bank", type: "Savings", balance: 70500 }, // Started with 0, got 75k salary, spent 4.5k
     { name: "Credit Card", type: "Credit", balance: 0 },
 ];
 
@@ -85,10 +86,30 @@ export default function BudgetPage() {
     const [newExpense, setNewExpense] = useState(emptyExpense);
     const [newDeposit, setNewDeposit] = useState<Omit<Deposit, 'date'>>(emptyDeposit);
 
-    const totalBalance = useMemo(() => 
-        accounts.reduce((sum, acc) => sum + acc.balance, 0),
+    // --- Corrected Financial Calculations ---
+    const assetAccounts = useMemo(() => 
+        accounts.filter(acc => acc.type !== 'Credit'), 
         [accounts]
     );
+
+    const liabilityAccounts = useMemo(() =>
+        accounts.filter(acc => acc.type === 'Credit'),
+        [accounts]
+    );
+
+    const totalAssets = useMemo(() =>
+        assetAccounts.reduce((sum, acc) => sum + acc.balance, 0),
+        [assetAccounts]
+    );
+
+    const totalLiabilities = useMemo(() =>
+        liabilityAccounts.reduce((sum, acc) => sum + acc.balance, 0),
+        [liabilityAccounts]
+    );
+
+    const netWorth = useMemo(() => totalAssets - totalLiabilities, [totalAssets, totalLiabilities]);
+
+    const totalAvailableBalance = useMemo(() => totalAssets, [totalAssets]);
 
     const monthlyExpenses = useMemo(() => {
         const today = new Date();
@@ -107,10 +128,8 @@ export default function BudgetPage() {
         [deposits]
     );
 
-    const netWorth = useMemo(() => totalBalance, [totalBalance]);
-
     const summaryData = [
-      { title: "Total Available balance", value: `INR ${totalBalance.toLocaleString()}`, description: `Across ${accounts.length} accounts`, Icon: LineChart },
+      { title: "Total Available balance", value: `INR ${totalAvailableBalance.toLocaleString()}`, description: `From ${assetAccounts.length} asset account(s)`, Icon: LineChart },
       { title: "Total Deposits", value: `INR ${totalDeposits.toLocaleString()}`, description: "Total income received", Icon: DollarSign },
       { title: "Monthly Expenses", value: `INR ${monthlyExpenses.toLocaleString()}`, description: "This month's spending", Icon: CreditCard },
     ];
@@ -133,11 +152,16 @@ export default function BudgetPage() {
         const expenseToAdd: Expense = { ...newExpense, date: formatDate(new Date()) };
         setExpenses([...expenses, expenseToAdd]);
 
-        const updatedAccounts = accounts.map(acc => 
-            acc.name === newExpense.accountName 
-            ? { ...acc, balance: acc.balance - newExpense.amount }
-            : acc
-        );
+        const updatedAccounts = accounts.map(acc => {
+            if (acc.name === newExpense.accountName) {
+                if (acc.type === 'Credit') {
+                    return { ...acc, balance: acc.balance + newExpense.amount }; // Increase liability
+                } else {
+                    return { ...acc, balance: acc.balance - newExpense.amount }; // Decrease asset
+                }
+            }
+            return acc;
+        });
         setAccounts(updatedAccounts);
         
         setNewExpense(emptyExpense);
@@ -152,11 +176,16 @@ export default function BudgetPage() {
         const depositToAdd: Deposit = { ...newDeposit, date: formatDate(new Date()) };
         setDeposits([...deposits, depositToAdd]);
 
-        const updatedAccounts = accounts.map(acc => 
-            acc.name === newDeposit.accountName 
-            ? { ...acc, balance: acc.balance + newDeposit.amount }
-            : acc
-        );
+        const updatedAccounts = accounts.map(acc => {
+            if (acc.name === newDeposit.accountName) {
+                if (acc.type === 'Credit') {
+                    return { ...acc, balance: acc.balance - newDeposit.amount }; // Paying down liability
+                } else {
+                    return { ...acc, balance: acc.balance + newDeposit.amount }; // Increasing asset
+                }
+            }
+            return acc;
+        });
         setAccounts(updatedAccounts);
 
         setNewDeposit(emptyDeposit);
@@ -277,7 +306,9 @@ export default function BudgetPage() {
                                         <TableRow key={i}>
                                             <TableCell className="font-medium">{acc.name}</TableCell>
                                             <TableCell><Badge variant="outline">{acc.type}</Badge></TableCell>
-                                            <TableCell className={`text-right ${acc.balance < 0 ? 'text-destructive' : ''}`}>{acc.balance.toLocaleString()}</TableCell>
+                                            <TableCell className={`text-right font-mono ${(acc.type === 'Credit' && acc.balance > 0) || (acc.type !== 'Credit' && acc.balance < 0) ? 'text-destructive' : ''}`}>
+                                                {acc.balance.toLocaleString()}
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -349,7 +380,7 @@ export default function BudgetPage() {
                                             <TableCell><Badge>{exp.category}</Badge></TableCell>
                                             <TableCell>{exp.date}</TableCell>
                                             <TableCell><Badge variant="secondary">{exp.accountName}</Badge></TableCell>
-                                            <TableCell className="text-right text-destructive">- {exp.amount.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right text-destructive font-mono">- {exp.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -415,7 +446,7 @@ export default function BudgetPage() {
                                             <TableCell className="font-medium">{dep.description}</TableCell>
                                             <TableCell>{dep.date}</TableCell>
                                             <TableCell><Badge variant="secondary">{dep.accountName}</Badge></TableCell>
-                                            <TableCell className="text-right text-primary">+ {dep.amount.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right text-primary font-mono">+ {dep.amount.toLocaleString()}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -438,13 +469,27 @@ export default function BudgetPage() {
             <AlertDialog open={showNetWorthDialog} onOpenChange={setShowNetWorthDialog}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Total Net Worth</AlertDialogTitle>
+                  <AlertDialogTitle>Your Financial Snapshot</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This is your true net worth (assets minus liabilities), which is the total of all your account balances. All deposits and expenses are already factored in.
+                    Your net worth is the value of your assets (e.g. savings) minus your liabilities (e.g. credit card debt).
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <div className="py-4 text-center">
-                    <p className="text-4xl font-bold">INR {netWorth.toLocaleString()}</p>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Total Assets</span>
+                            <span className="font-medium font-mono text-primary">+ INR {totalAssets.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Total Liabilities</span>
+                            <span className="font-medium font-mono text-destructive">- INR {totalLiabilities.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                        <span className="font-semibold text-lg">Net Worth</span>
+                        <span className="font-bold text-2xl font-mono">INR {netWorth.toLocaleString()}</span>
+                    </div>
                 </div>
                 <AlertDialogFooter>
                   <AlertDialogAction onClick={() => setShowNetWorthDialog(false)}>Close</AlertDialogAction>
