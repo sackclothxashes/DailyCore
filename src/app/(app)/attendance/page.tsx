@@ -53,6 +53,7 @@ export default function AttendancePage() {
         setAttendance(prev => ({ ...prev, [dateKey]: status }));
     };
 
+    // This calculates total leaves taken across all time for the display cards.
     const attendanceCounts = React.useMemo(() => {
         return Object.values(attendance).reduce((acc, status) => {
             if (status === 'Present') {
@@ -66,12 +67,35 @@ export default function AttendancePage() {
         }, { present: 0, casual: 0, earned: 0 });
     }, [attendance]);
     
+    // This calculates progress towards the 730-day goal, with a yearly resetting leave allowance.
     const progressDays = React.useMemo(() => {
-        const presentDays = attendanceCounts.present;
-        const totalLeaveDays = attendanceCounts.casual + attendanceCounts.earned;
-        const countableLeaveDays = Math.min(totalLeaveDays, 30);
-        return presentDays + countableLeaveDays;
-    }, [attendanceCounts]);
+        const totalPresentDays = Object.values(attendance).filter(status => status === 'Present').length;
+
+        const leavesByYear: Record<number, number> = {};
+
+        Object.entries(attendance).forEach(([dateKey, status]) => {
+            if (status === 'Casual Leave' || status === 'Earned/Sick Leave') {
+                const date = parse(dateKey, 'yyyy-MM-dd', new Date());
+                const year = date.getFullYear();
+                const month = date.getMonth(); // 0-indexed (Jan=0, Jun=5, Jul=6)
+
+                // Attendance year runs from July 1 to June 30.
+                const attendanceYear = month >= 6 ? year : year - 1;
+
+                if (!leavesByYear[attendanceYear]) {
+                    leavesByYear[attendanceYear] = 0;
+                }
+                leavesByYear[attendanceYear] += 1;
+            }
+        });
+
+        let totalCountableLeaveDays = 0;
+        for (const year in leavesByYear) {
+            totalCountableLeaveDays += Math.min(leavesByYear[year], 30);
+        }
+
+        return totalPresentDays + totalCountableLeaveDays;
+    }, [attendance]);
 
     const modifiers = React.useMemo(() => {
         const mods: Record<string, Date[]> = {
@@ -107,7 +131,7 @@ export default function AttendancePage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Goal Progress</CardTitle>
-                        <CardDescription>Goal: 730 days (Present + up to 30 leave days)</CardDescription>
+                        <CardDescription>Goal: 730 days (Present + up to 30 leave days per year)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-3xl font-bold mb-2">{progressDays}</p>
@@ -117,6 +141,7 @@ export default function AttendancePage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Casual Leave Taken</CardTitle>
+                        <CardDescription>Total since July 1, 2025</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-3xl font-bold">{attendanceCounts.casual}</p>
@@ -125,6 +150,7 @@ export default function AttendancePage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Earned/Sick Leave Taken</CardTitle>
+                        <CardDescription>Total since July 1, 2025</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-3xl font-bold">{attendanceCounts.earned}</p>
