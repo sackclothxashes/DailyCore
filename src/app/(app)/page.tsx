@@ -30,7 +30,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTasks, taskIcons } from "@/hooks/use-tasks";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 
 const features = [
@@ -141,29 +140,20 @@ export default function DashboardPage() {
         ))}
 
         {tasks.length > 0 && (
-            <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-                <CardHeader>
-                    <CardTitle>Daily Streaks</CardTitle>
-                    <CardDescription>Your current progress on daily habits.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-wrap gap-4">
-                        {tasks.map(task => {
-                            const IconComponent = taskIcons[task.icon];
-                            return (
-                                <div key={task.id} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-secondary min-w-[100px]">
-                                    <IconComponent className="w-8 h-8 text-secondary-foreground" />
-                                    <span className="text-sm text-center font-medium truncate w-full">{task.title}</span>
-                                    <div className="flex items-center gap-1 text-orange-500">
-                                        <Flame className="w-4 h-4" />
-                                        <span className="font-semibold text-sm">{task.streak}</span>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-x-6 gap-y-4">
+                {tasks.map(task => {
+                    const IconComponent = taskIcons[task.icon];
+                    return (
+                        <div key={task.id} title={task.title} className="flex items-center gap-2 p-2 rounded-lg bg-secondary cursor-default">
+                            <IconComponent className="w-6 h-6 text-secondary-foreground" />
+                            <div className="flex items-center gap-1 text-orange-500">
+                                <Flame className="w-5 h-5" />
+                                <span className="font-bold text-lg">{task.streak}</span>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
         )}
 
         {features.map((feature) => (
