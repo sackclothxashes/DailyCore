@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { format } from "date-fns"
 
 export type Task = {
   id: string
@@ -29,7 +30,12 @@ const priorityVariantMap: { [key in Task["priority"]]: "default" | "secondary" |
   High: "destructive",
 };
 
-export const columns: ColumnDef<Task>[] = [
+type GetColumnsProps = {
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+}
+
+export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Task>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -83,6 +89,12 @@ export const columns: ColumnDef<Task>[] = [
   {
     accessorKey: "dueDate",
     header: "Due Date",
+    cell: ({ row }) => {
+        const date = new Date(row.getValue("dueDate"));
+        // Add a day to the date because of timezone issues
+        date.setDate(date.getDate() + 1);
+        return format(date, "MMM d, yyyy");
+    }
   },
   {
     id: "actions",
@@ -104,9 +116,8 @@ export const columns: ColumnDef<Task>[] = [
               Copy task ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View details</DropdownMenuItem>
-            <DropdownMenuItem>Edit task</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete task</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(task)}>Edit task</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(task)}>Delete task</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

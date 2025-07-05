@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FeatureCard } from "@/components/app/feature-card";
 import { ProgressCard } from "@/components/app/progress-card";
 import { PageHeader } from "@/components/app/page-header";
@@ -14,6 +14,7 @@ import {
   PlusCircle,
   Calendar as CalendarIcon,
   Flame,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,6 +31,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTasks, taskIcons } from "@/hooks/use-tasks";
+import Link from 'next/link';
+import type { Task } from '@/components/app/tasks/columns';
 
 
 const features = [
@@ -72,6 +75,50 @@ export type Goal = {
   endDate: Date;
 };
 
+// Mock data for tasks - in a real app, this would be fetched from a shared store or API
+const tasksData: Task[] = [
+    {
+      id: "TASK-8782",
+      task: "Complete project proposal",
+      status: "in-progress",
+      priority: "High",
+      category: "Work",
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0],
+    },
+    {
+      id: "TASK-7878",
+      task: "Schedule dentist appointment",
+      status: "todo",
+      priority: "Medium",
+      category: "Health",
+      dueDate: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString().split('T')[0], // Overdue
+    },
+    {
+      id: "TASK-4532",
+      task: "Buy groceries",
+      status: "todo",
+      priority: "Low",
+      category: "Personal",
+      dueDate: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0], // Overdue
+    },
+    {
+      id: "TASK-9434",
+      task: "Pay electricity bill",
+      status: "done",
+      priority: "High",
+      category: "Finance",
+      dueDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().split('T')[0], // Done, not overdue
+    },
+    {
+      id: "TASK-5435",
+      task: "Team meeting presentation",
+      status: "in-progress",
+      priority: "Medium",
+      category: "Work",
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0],
+    },
+];
+
 
 export default function DashboardPage() {
   const { tasks } = useTasks();
@@ -90,6 +137,14 @@ export default function DashboardPage() {
   const [newGoalEndDate, setNewGoalEndDate] = useState<Date | undefined>();
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+
+  const overdueTasksCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today for accurate comparison
+    return tasksData.filter(
+        (task) => task.status !== "done" && new Date(task.dueDate) < today
+    ).length;
+  }, []);
 
   const handleAddGoal = () => {
     if (newGoalTitle && newGoalStartDate && newGoalEndDate) {
@@ -124,6 +179,14 @@ export default function DashboardPage() {
         title="Welcome to ChronoZen"
         description="Your all-in-one personal management app. Select a module to get started."
       >
+        {overdueTasksCount > 0 && (
+          <Link href="/tasks" passHref>
+            <Button variant="ghost" className="text-destructive hover:bg-destructive/10">
+              <AlertCircle className="mr-2" />
+              {overdueTasksCount} Overdue Task{overdueTasksCount > 1 ? 's' : ''}
+            </Button>
+          </Link>
+        )}
         <Button onClick={() => setIsAddGoalDialogOpen(true)}>
           <PlusCircle className="mr-2" /> Add Goal
         </Button>
