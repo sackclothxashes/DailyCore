@@ -16,6 +16,7 @@ import {
   Calendar as CalendarIcon,
   Flame,
   AlertCircle,
+  CalendarDays,
 } from "lucide-react";
 import {
   Dialog,
@@ -67,6 +68,12 @@ const features = [
     description: "Create a visual diary of your life.",
     href: "/diary",
     Icon: Camera,
+  },
+  {
+    title: "Attendance",
+    description: "Track your personal attendance.",
+    href: "/attendance",
+    Icon: CalendarDays,
   },
 ];
 
