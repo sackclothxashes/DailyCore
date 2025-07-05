@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { 
   format, 
   subMonths, 
@@ -40,7 +41,6 @@ type Snapshot = {
   src: string;
   alt: string;
   date: Date;
-  hint: string;
   notes: string;
 };
 
@@ -57,7 +57,6 @@ function PhotoGrid({ items, onImageSelect }: { items: Snapshot[]; onImageSelect:
                 width={600}
                 height={400}
                 className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint={image.hint}
               />
               <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
                 <p className="text-white text-sm font-semibold">{format(image.date, 'MMMM d, yyyy')}</p>
@@ -77,6 +76,8 @@ export default function DiaryPage() {
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newSnapshotNotes, setNewSnapshotNotes] = useState("");
+  const [newSnapshotPreview, setNewSnapshotPreview] = useState<string | null>(null);
+
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
@@ -91,18 +92,29 @@ export default function DiaryPage() {
     setImages(images.map(img => img.id === selectedImage.id ? { ...img, notes: currentNotes } : img));
     setSelectedImage(null);
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setNewSnapshotPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
   
   const handleAddSnapshot = () => {
     const newSnapshot: Snapshot = {
       id: Date.now(),
-      src: `https://placehold.co/600x400.png`,
+      src: newSnapshotPreview || `https://placehold.co/600x400.png`,
       alt: "A daily snapshot",
       date: new Date(),
-      hint: "daily moment",
       notes: newSnapshotNotes,
     };
-    setImages(prevImages => [newSnapshot, ...prevImages].sort((a,b) => b.date.getTime() - a.date.getTime()));
+    setImages(prevImages => [newSnapshot, ...prevImages].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setNewSnapshotNotes("");
+    setNewSnapshotPreview(null);
     setIsAddDialogOpen(false);
   };
 
@@ -163,7 +175,10 @@ export default function DiaryPage() {
         >
            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => {
+                setNewSnapshotPreview(null);
+                setNewSnapshotNotes('');
+              }}>
                 <PlusCircle className="mr-2" />
                 Add Snapshot
               </Button>
@@ -172,10 +187,25 @@ export default function DiaryPage() {
                 <DialogHeader>
                     <DialogTitle>Add Today's Snapshot</DialogTitle>
                     <DialogDescription>
-                        Capture your moment. A placeholder image will be used. Add your thoughts below.
+                        Upload a photo and add your thoughts for the day.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="snapshot-image">Your Photo</Label>
+                        <Input id="snapshot-image" type="file" accept="image/*" onChange={handleImageChange} />
+                    </div>
+                    {newSnapshotPreview && (
+                        <div className="mt-4 rounded-md overflow-hidden">
+                            <Image
+                                src={newSnapshotPreview}
+                                alt="Selected snapshot preview"
+                                width={600}
+                                height={400}
+                                className="object-cover w-full h-full"
+                            />
+                        </div>
+                    )}
                     <div className="grid w-full gap-1.5">
                         <Label htmlFor="new-notes">Today's Thoughts</Label>
                         <Textarea
@@ -191,7 +221,7 @@ export default function DiaryPage() {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={handleAddSnapshot}>Add Snapshot</Button>
+                    <Button onClick={handleAddSnapshot} disabled={!newSnapshotPreview}>Add Snapshot</Button>
                 </DialogFooter>
             </DialogContent>
           </Dialog>
