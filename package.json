@@ -10,9 +10,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "cap:sync": "cap sync android",
-    "cap:open": "cap open android",
-    "cap:run": "cap run android"
+    "cap:sync": "capacitor sync android",
+    "cap:open": "capacitor open android",
+    "cap:run": "capacitor run android"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
