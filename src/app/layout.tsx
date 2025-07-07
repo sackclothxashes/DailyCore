@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   title: "ChronoZen",
   description: "Your all-in-one personal management app.",
   manifest: "/manifest.webmanifest",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
